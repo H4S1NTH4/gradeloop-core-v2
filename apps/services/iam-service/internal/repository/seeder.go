@@ -124,16 +124,28 @@ func Seed(db *gorm.DB) error {
 				return err
 			}
 			log.Printf("Created Super Admin: %s", superAdminEmail)
-
-			// Assign Super Admin Role
-			var saRole domain.Role
-			if err := db.Where("name = ?", domain.RoleSuperAdmin).First(&saRole).Error; err == nil {
-				if err := db.Model(&superAdmin).Association("Roles").Append(&saRole); err != nil {
-					return err
-				}
-			}
 		} else {
 			return err
+		}
+	}
+
+	// Always ensure Super Admin Role is assigned
+	var saRole domain.Role
+	if err := db.Where("name = ?", domain.RoleSuperAdmin).First(&saRole).Error; err == nil {
+		// Check if user already has this role to avoid duplicates if specific DB constraints exist (though GORM handles association append well usually)
+		// Better to just Append which GORM handles (if not exists) or Replace if we want to enforce ONLY this role?
+		// For Super Admin, we probably just want to ensure they HAVE it.
+		// Using Append with a check or just Append. GORM's Append shouldn't duplicate if set up correctly, but let's be safe.
+		var existingRoles []domain.Role
+		if err := db.Model(&superAdmin).Association("Roles").Find(&existingRoles, "id = ?", saRole.ID); err != nil {
+			return err
+		}
+
+		if len(existingRoles) == 0 {
+			if err := db.Model(&superAdmin).Association("Roles").Append(&saRole); err != nil {
+				return err
+			}
+			log.Printf("Assigned Super Admin Role to: %s", superAdminEmail)
 		}
 	}
 

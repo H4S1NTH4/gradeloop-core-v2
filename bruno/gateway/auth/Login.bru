@@ -17,6 +17,10 @@ body:json {
   }
 }
 
+vars:pre-request {
+  gateway_url: http://localhost:8080
+}
+
 script:post-response {
   if (res.status === 200) {
     bru.setEnvVar("access_token", res.body.access_token);
