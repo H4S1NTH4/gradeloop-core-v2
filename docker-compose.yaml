@@ -9,6 +9,12 @@ services:
     environment:
       - SERVER_PORT=8081
       - ENABLE_PREFORK=false
+      - DB_HOST=gradeloop-gradeloop-project-v2.k.aivencloud.com
+      - DB_PORT=17317
+      - DB_USER=avnadmin
+      - DB_PASSWORD=${GRA_DB_PASSWORD}
+      - DB_NAME=defaultdb
+      - DB_SSLMODE=require
     ports:
       - "8081:8081"
     networks:

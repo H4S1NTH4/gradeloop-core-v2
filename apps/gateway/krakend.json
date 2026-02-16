@@ -83,21 +83,6 @@
             ]
         },
         {
-            "endpoint": "/api/v1/auth/reset-password",
-            "method": "POST",
-            "output_encoding": "json",
-            "backend": [
-                {
-                    "url_pattern": "/api/auth/reset-password",
-                    "method": "POST",
-                    "host": [
-                        "http://iam-service:8081"
-                    ],
-                    "disable_host_sanitize": true
-                }
-            ]
-        },
-        {
             "endpoint": "/api/v1/users",
             "method": "POST",
             "output_encoding": "json",

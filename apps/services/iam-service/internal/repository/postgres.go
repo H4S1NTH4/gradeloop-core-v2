@@ -56,6 +56,12 @@ func (r *PostgresRepository) AutoMigrate() error {
 	if err != nil {
 		return fmt.Errorf("auto migration failed: %w", err)
 	}
+
+	// Cleanup legacy columns from previous schema versions
+	if err := r.DB.Exec("ALTER TABLE roles DROP COLUMN IF EXISTS role_name").Error; err != nil {
+		log.Printf("Warning: failed to drop legacy column role_name: %v", err)
+	}
+
 	log.Println("AutoMigrate completed.")
 	return nil
 }

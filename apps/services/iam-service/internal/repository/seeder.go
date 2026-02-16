@@ -32,7 +32,7 @@ func Seed(db *gorm.DB) error {
 		var perm domain.Permission
 		if err := db.Where("name = ?", permName).First(&perm).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				perm = domain.Permission{Name: permName, Description: "System Permission"}
+				perm = domain.Permission{ID: utils.GenerateUUID(), Name: permName, Description: "System Permission"}
 				if err := db.Create(&perm).Error; err != nil {
 					return err
 				}
@@ -67,7 +67,7 @@ func Seed(db *gorm.DB) error {
 		var role domain.Role
 		if err := db.Where("name = ?", roleName).First(&role).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				role = domain.Role{Name: roleName, Description: "System Role"}
+				role = domain.Role{ID: utils.GenerateUUID(), Name: roleName, Description: "System Role"}
 				if err := db.Create(&role).Error; err != nil {
 					return err
 				}
@@ -109,6 +109,7 @@ func Seed(db *gorm.DB) error {
 			hashedPassword, _ := utils.HashPassword(superAdminPass)
 
 			superAdmin = domain.User{
+				ID:           utils.GenerateUUID(),
 				Email:        superAdminEmail,
 				FullName:     "Super Admin",
 				PasswordHash: hashedPassword,

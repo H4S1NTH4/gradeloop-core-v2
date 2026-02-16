@@ -6,7 +6,7 @@ import (
 
 type Role struct {
 	ID          string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	Name        string    `gorm:"uniqueIndex;not null;size:50" json:"name"`
+	Name        string    `gorm:"uniqueIndex;not null;size:50;default:gen_random_uuid()" json:"name"`
 	Description string    `gorm:"type:text" json:"description"`
 	CreatedAt   time.Time `gorm:"not null;default:now()" json:"created_at"`
 
@@ -17,7 +17,7 @@ type Role struct {
 
 type Permission struct {
 	ID          string    `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	Name        string    `gorm:"uniqueIndex;not null;size:100" json:"name"`
+	Name        string    `gorm:"uniqueIndex;not null;size:100;default:gen_random_uuid()" json:"name"`
 	Description string    `gorm:"type:text" json:"description"`
 	CreatedAt   time.Time `gorm:"not null;default:now()" json:"created_at"`
 
