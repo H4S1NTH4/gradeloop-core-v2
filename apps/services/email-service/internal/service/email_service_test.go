@@ -85,8 +85,8 @@ type MockProducer struct {
 	mock.Mock
 }
 
-func (m *MockProducer) Publish(ctx context.Context, topic string, key string, message interface{}) error {
-	args := m.Called(ctx, topic, key, message)
+func (m *MockProducer) Publish(ctx context.Context, topic string, message interface{}) error {
+	args := m.Called(ctx, topic, message)
 	return args.Error(0)
 }
 
@@ -110,9 +110,9 @@ func TestSendEmail_Success(t *testing.T) {
 	// Expectations
 	mockRepo.On("CreateMessage", ctx, mock.AnythingOfType("*domain.EmailMessage")).Return(nil)
 	mockRepo.On("CreateRecipient", ctx, mock.AnythingOfType("*domain.EmailRecipient")).Return(nil)
-	mockProducer.On("Publish", ctx, "email.send", mock.AnythingOfType("string"), mock.Anything).Return(nil)
+	mockProducer.On("Publish", ctx, "email.send", mock.Anything).Return(nil)
 
-	err := svc.SendEmail(ctx, req)
+	_, err := svc.SendEmail(ctx, req)
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)

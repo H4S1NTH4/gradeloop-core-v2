@@ -10,7 +10,7 @@ import (
 	"github.com/gradeloop/email-service/internal/config"
 	"github.com/gradeloop/email-service/internal/delivery/http"
 	"github.com/gradeloop/email-service/internal/infrastructure"
-	infraKafka "github.com/gradeloop/email-service/internal/infrastructure/kafka"
+	infra "github.com/gradeloop/email-service/internal/infrastructure/rabbitmq"
 	"github.com/gradeloop/email-service/internal/repository"
 	"github.com/gradeloop/email-service/internal/service"
 	"github.com/gradeloop/email-service/internal/worker"
@@ -23,9 +23,15 @@ func main() {
 	// 2. Setup Database
 	db := infrastructure.NewPostgresDB(cfg)
 
-	// 3. Setup Kafka Producer
-	producer := infraKafka.NewProducer(cfg)
-	defer producer.Close()
+	// 3. Setup RabbitMQ
+	rabbitConn, err := infra.NewConnection(cfg.RabbitMQ.URL)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer rabbitConn.Close()
+
+	producer := infra.NewProducer(rabbitConn)
+	consumer := infra.NewConsumer(rabbitConn)
 
 	// 4. Setup Components
 	emailRepo := repository.NewPostgresRepository(db)
@@ -34,7 +40,7 @@ func main() {
 
 	// 5. Setup & Start Worker (Consumer)
 	mailer := infrastructure.NewMailer(cfg)
-	emailWorker := worker.NewConsumer(cfg, emailRepo, mailer, producer)
+	emailWorker := worker.NewConsumer(consumer, emailRepo, mailer, producer)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

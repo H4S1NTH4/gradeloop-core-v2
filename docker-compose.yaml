@@ -35,12 +35,21 @@ services:
       - DB_PASSWORD=${GRA_DB_PASSWORD}
       - DB_NAME=${EMAIL_SVC_DB_NAME}
       - DB_SSLMODE=${GRA_DB_SSLMODE}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USERNAME=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASS}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     ports:
       - "8082:8082"
+    depends_on:
+      - rabbitmq
+    networks:
+      - gradeloop-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     networks:
       - gradeloop-network
 

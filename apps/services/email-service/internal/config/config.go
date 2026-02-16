@@ -4,16 +4,15 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	App   AppConfig
-	DB    DBConfig
-	Kafka KafkaConfig
-	SMTP  SMTPConfig
+	App      AppConfig
+	DB       DBConfig
+	RabbitMQ RabbitMQConfig
+	SMTP     SMTPConfig
 }
 
 type AppConfig struct {
@@ -30,11 +29,8 @@ type DBConfig struct {
 	SSLMode  string
 }
 
-type KafkaConfig struct {
-	Brokers  []string
-	GroupID  string
-	Username string
-	Password string
+type RabbitMQConfig struct {
+	URL string
 }
 
 type SMTPConfig struct {
@@ -62,11 +58,8 @@ func LoadConfig() *Config {
 			Name:     getEnv("DB_NAME", "email-db"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
-		Kafka: KafkaConfig{
-			Brokers:  strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
-			GroupID:  getEnv("KAFKA_GROUP_ID", "email-service-worker"),
-			Username: getEnv("KAFKA_USERNAME", ""),
-			Password: getEnv("KAFKA_PASSWORD", ""),
+		RabbitMQ: RabbitMQConfig{
+			URL: getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 		},
 		SMTP: SMTPConfig{
 			Host:     getEnv("SMTP_HOST", "localhost"),

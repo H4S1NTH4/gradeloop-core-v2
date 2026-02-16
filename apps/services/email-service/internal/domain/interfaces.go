@@ -29,7 +29,7 @@ type EmailRepository interface {
 }
 
 type EmailService interface {
-	SendEmail(ctx context.Context, req *SendEmailRequest) error
+	SendEmail(ctx context.Context, req *SendEmailRequest) (*EmailMessage, error)
 	SendBulkEmail(ctx context.Context, req *BulkSendEmailRequest) error
 
 	// Template methods

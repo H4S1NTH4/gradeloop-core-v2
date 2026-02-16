@@ -6,36 +6,22 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/gradeloop/email-service/internal/config"
 	"github.com/gradeloop/email-service/internal/domain"
 	infra "github.com/gradeloop/email-service/internal/infrastructure"
-	infraKafka "github.com/gradeloop/email-service/internal/infrastructure/kafka"
-	"github.com/segmentio/kafka-go"
+	"github.com/gradeloop/email-service/internal/infrastructure/rabbitmq"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Consumer struct {
-	reader  *kafka.Reader
-	service domain.EmailService // To update status ?? Or just repo?
-	// Better to use Repo directly or a specific invalidation logic, but service is fine.
-	// Actually, clean architecture says Worker uses Service or UseCases.
-	// But here Worker sends email using Mailer, then updates DB.
-	mailer   *infra.Mailer
+	consumer *rabbitmq.Consumer
 	repo     domain.EmailRepository
-	producer *infraKafka.Producer // For retry/dead-letter
+	mailer   *infra.Mailer
+	producer *rabbitmq.Producer // For retry/dead-letter
 }
 
-func NewConsumer(cfg *config.Config, repo domain.EmailRepository, mailer *infra.Mailer, producer *infraKafka.Producer) *Consumer {
-	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  cfg.Kafka.Brokers,
-		GroupID:  cfg.Kafka.GroupID,
-		Topic:    "email.send",
-		MinBytes: 10e3, // 10KB
-		MaxBytes: 10e6, // 10MB
-		// Dialing config needed for SASL/SSL similarly to producer
-	})
-
+func NewConsumer(consumer *rabbitmq.Consumer, repo domain.EmailRepository, mailer *infra.Mailer, producer *rabbitmq.Producer) *Consumer {
 	return &Consumer{
-		reader:   r,
+		consumer: consumer,
 		repo:     repo,
 		mailer:   mailer,
 		producer: producer,
@@ -43,28 +29,31 @@ func NewConsumer(cfg *config.Config, repo domain.EmailRepository, mailer *infra.
 }
 
 func (c *Consumer) Start(ctx context.Context) {
-	log.Println("Starting Kafka Consumer...")
-	for {
-		m, err := c.reader.FetchMessage(ctx)
-		if err != nil {
-			log.Printf("Failed to fetch message: %v", err)
-			continue
-		}
+	log.Println("Starting RabbitMQ Consumer...")
+	msgs, err := c.consumer.Consume("email_send") // Queue name
+	if err != nil {
+		log.Fatalf("Failed to start consumer: %v", err)
+	}
 
-		log.Printf("Processing message at topic/partition/offset %v/%v/%v: %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+	forever := make(chan bool)
 
-		if err := c.processMessage(ctx, m); err != nil {
-			log.Printf("Error processing message: %v", err)
-			// Retry logic would go here (publish to retry topic)
-		} else {
-			if err := c.reader.CommitMessages(ctx, m); err != nil {
-				log.Printf("Failed to commit message: %v", err)
+	go func() {
+		for d := range msgs {
+			log.Printf("Received a message: %s", d.Body)
+			if err := c.processMessage(ctx, d); err != nil {
+				log.Printf("Error processing message: %v", err)
+				d.Nack(false, true) // Requeue
+			} else {
+				d.Ack(false)
 			}
 		}
-	}
+	}()
+
+	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
+	<-forever
 }
 
-func (c *Consumer) processMessage(ctx context.Context, m kafka.Message) error {
+func (c *Consumer) processMessage(ctx context.Context, m amqp.Delivery) error {
 	var event struct {
 		MessageID  uuid.UUID `json:"message_id"`
 		Recipients []string  `json:"recipients"`
@@ -72,7 +61,7 @@ func (c *Consumer) processMessage(ctx context.Context, m kafka.Message) error {
 		// ... other fields
 	}
 
-	if err := json.Unmarshal(m.Value, &event); err != nil {
+	if err := json.Unmarshal(m.Body, &event); err != nil {
 		return err
 	}
 

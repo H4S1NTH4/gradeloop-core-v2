@@ -1,4 +1,4 @@
-FROM golang:1.26
+FROM golang:latest
 
 # Enviroment variable
 WORKDIR /usr/src/some-api

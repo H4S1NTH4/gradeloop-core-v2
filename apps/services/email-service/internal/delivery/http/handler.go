@@ -20,11 +20,16 @@ func (h *Handler) SendEmail(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	if err := h.service.SendEmail(c.Context(), &req); err != nil {
+	resp, err := h.service.SendEmail(c.Context(), &req)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"message": "Email queued for sending"})
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "Email queued for sending",
+		"id":      resp.ID,
+		"status":  resp.Status,
+	})
 }
 
 func (h *Handler) CreateTemplate(c fiber.Ctx) error {

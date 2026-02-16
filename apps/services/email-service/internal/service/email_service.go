@@ -23,7 +23,7 @@ func NewEmailService(repo domain.EmailRepository, producer domain.EventProducer)
 	}
 }
 
-func (s *emailService) SendEmail(ctx context.Context, req *domain.SendEmailRequest) error {
+func (s *emailService) SendEmail(ctx context.Context, req *domain.SendEmailRequest) (*domain.EmailMessage, error) {
 	// 1. Resolve Template (if name provided)
 	var templateID *uuid.UUID
 	var subject string
@@ -31,7 +31,7 @@ func (s *emailService) SendEmail(ctx context.Context, req *domain.SendEmailReque
 	if req.TemplateName != "" {
 		tmpl, err := s.repo.GetTemplateByName(ctx, req.TemplateName)
 		if err != nil {
-			return fmt.Errorf("failed to get template: %w", err)
+			return nil, fmt.Errorf("failed to get template: %w", err)
 		}
 		templateID = &tmpl.ID
 		// Basic interpolation would happen here or in worker.
@@ -52,7 +52,7 @@ func (s *emailService) SendEmail(ctx context.Context, req *domain.SendEmailReque
 	}
 
 	if err := s.repo.CreateMessage(ctx, email); err != nil {
-		return fmt.Errorf("failed to create email message record: %w", err)
+		return nil, fmt.Errorf("failed to create email message record: %w", err)
 	}
 
 	// 3. Create Recipients
@@ -69,7 +69,7 @@ func (s *emailService) SendEmail(ctx context.Context, req *domain.SendEmailReque
 			// Log error but continue? or fail?
 			// For now, let's return error to be safe, though partial failure is tricky.
 			//Ideally transactional, but let's keep it simple.
-			return fmt.Errorf("failed to create recipient: %w", err)
+			return nil, fmt.Errorf("failed to create recipient: %w", err)
 		}
 	}
 
@@ -84,11 +84,11 @@ func (s *emailService) SendEmail(ctx context.Context, req *domain.SendEmailReque
 		"timestamp":     time.Now(),
 	}
 
-	if err := s.producer.Publish(ctx, "email.send", email.ID.String(), eventPayload); err != nil {
-		return fmt.Errorf("failed to publish to kafka: %w", err)
+	if err := s.producer.Publish(ctx, "email.send", eventPayload); err != nil {
+		return nil, fmt.Errorf("failed to publish to kafka: %w", err)
 	}
 
-	return nil
+	return email, nil
 }
 
 func (s *emailService) SendBulkEmail(ctx context.Context, req *domain.BulkSendEmailRequest) error {
