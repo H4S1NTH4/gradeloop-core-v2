@@ -27,103 +27,70 @@ This project is a high-performance web client built with **Bun**, **Next.js (App
 
 ---
 
-# Go Backend — iam-service (new / updated guidance)
+# Go Backend Development (Fiber)
 
-This repo contains a Go-based authentication service at `apps/services/iam-service`. The LLM/context file needs to include the folder structure and notes so AI agents and contributors understand the service layout, conventions, and environment variables.
+This project uses **Go** with **Fiber v3** for high-performance microservices (e.g., `apps/services/iam-service`).
 
-IAM-service folder structure (top-level)
-```
-apps/services/iam-service/
-├── cmd/               # entrypoints (e.g., cmd/main.go)
-├── config/            # env loader, configuration helpers
-├── database/          # DB connection and migrations
-├── handler/           # HTTP handlers
-├── middleware/        # middleware (auth, logging, etc.)
-├── model/             # domain models and GORM models
-├── router/            # routes setup (fiber or similar)
-├── tmp/                # ephemeral files (ignored)
-├── Dockerfile
-├── README.md
+## Standard Directory Structure
+All Go services MUST follow this internal package layout:
+
+```text
+apps/services/<service-name>/
+├── cmd/
+│   └── main.go           # Entrypoint: App, DB, and Dependency Injection wiring
+├── internal/
+│   ├── config/           # Environment loading and configuration
+│   ├── domain/           # Core business entities (GORM models)
+│   ├── dto/              # Data Transfer Objects (Request/Response structs)
+│   ├── handler/          # HTTP Handlers (controllers)
+│   ├── middleware/       # Custom middleware (Auth, RBAC, etc.)
+│   ├── repository/       # Data Access Layer (GORM)
+│   ├── router/           # Route registration
+│   ├── service/          # Business Logic Layer
+│   └── utils/            # Helper functions
 ├── go.mod
-└── go.sum
+└── Dockerfile
 ```
 
-Directory responsibilities and notes
-- `cmd/`:
-  - Holds `main` packages for running the service.
-  - Typical command to run locally: `go run ./cmd/main.go` (or use `air` for hot reload if configured).
-- `config/`:
-  - Centralized env loader using `github.com/joho/godotenv` (the service ships logic that searches parent directories for `.env`).
-  - Use `config.Config("KEY")` style helper across the service.
-- `database/`:
-  - DB connection logic (uses GORM + postgres driver).
-  - Connection logic supports both:
-    - Aiven-style connection via `POSTGRES_URL_BASE` + `IAM_SVC_DB_NAME` (+ `POSTGRES_SSLMODE`)
-    - Traditional env vars `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-  - For Aiven: set `POSTGRES_URL_BASE=postgres://user:pass@host:port/` and `IAM_SVC_DB_NAME=<db>` and optionally `POSTGRES_SSLMODE=require`.
-  - If `POSTGRES_URL_BASE` is present, the service will prefer that and append `IAM_SVC_DB_NAME` as the path; otherwise it uses a formatted `host=... port=... user=...` DSN.
-- `handler/`:
-  - Route handlers (login/register, token endpoints).
-  - Uses `config.Config("SECRET")` or similar for JWT signing.
-- `middleware/`:
-  - Authentication middleware (JWT validation), error handling helpers.
-- `model/`:
-  - GORM model definitions for `User`, `Role`, etc.
-- `router/`:
-  - Wiring of routes to handlers and middleware (e.g., Fiber app setup).
-- `Dockerfile`:
-  - Container recipe for building the service for local/dev or CI.
-- `README.md`:
-  - Service-specific docs and quickstart.
+## Implementation Guidelines
 
-Environment variables (iam-service)
-- Auth-specific:
-  - `SECRET` — JWT secret (required)
-  - `IAM_SVC_DB_NAME` — DB name for the auth service when using Aiven-style URL (recommended if using Aiven)
-- Aiven / remote DB:
-  - `POSTGRES_URL_BASE` — base Postgres URL from Aiven (example: `postgres://avnadmin:xxx@<host>:<port>/`)
-  - `POSTGRES_SSLMODE` — `require` for Aiven (optional)
-  - When `POSTGRES_URL_BASE` and `IAM_SVC_DB_NAME` are present, the service builds the full connection string using those values and includes `sslmode` when provided.
-- Local DB fallback:
-  - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` — used when `POSTGRES_URL_BASE` is not set.
-- Compose & docker:
-  - The infra compose can set `POSTGRES_URL_BASE` and `IAM_SVC_DB_NAME` in the `.env` file. If you prefer local Postgres for dev, provide DB credentials instead.
+### 1. Entrypoint (`cmd/main.go`)
+- Initialize the `fiber.App`.
+- Connect to the Database (`repository.NewPostgresRepository`).
+- Run Auto-Migrations and Seeding.
+- Initialize Repositories, Services, and Handlers (Dependency Injection).
+- Setup Routes via `router.SetupRoutes`.
+- Start the server using the configured port.
 
-Build & run (Go service)
-- Local development:
-  - `go install` / `go build` / `go run ./cmd/main.go`
-  - Use `air` or similar for live reload (if included in Dockerfile / dev setup).
-- Docker:
-  - Build: `docker build -t gradeloop-iam-service .` (from `apps/services/iam-service`)
-  - Run: `docker run --env-file ../../.env -p 3000:3000 gradeloop-iam-service`
-- Compose (infra):
-  - The minimal infra compose kept for iam-service expects external DB or Aiven. Ensure `.env` has the required Aiven vars before `docker compose up`.
-- Testing:
-  - Add unit tests using Go's `testing` package.
-  - Use dependency injection for DB and external dependencies to enable testability.
+### 2. Router (`internal/router`)
+- Define a `Config` struct to hold Handler dependencies.
+- Use `func SetupRoutes(app *fiber.App, config Config)` to register endpoints.
+- Group routes logically (e.g., `auth := app.Group("/auth")`).
+- Apply middleware at the group or route level.
 
-Go tooling & code style
-- Go version consistent with `go.mod` (respect `go 1.xx` in `go.mod`).
-- Formatting: `gofmt -w .` and `goimports -w .`
-- Linting: `golangci-lint run ./...` (recommended)
-- Vet: `go vet ./...`
-- Module management: `go mod tidy` to keep `go.mod` clean.
+### 3. Handlers (`internal/handler`)
+- Handlers should be structs containing Service dependencies.
+- Methods signature: `func (h *Handler) Action(c fiber.Ctx) error`.
+- Use `c.Bind().Body(&req)` for parsing request bodies.
+- Use `c.Locals("user_id")` to access authenticated user data.
+- Return errors using the standardized path or `c.Status(code).JSON()`.
 
-Security & secrets
-- Do NOT hardcode secrets in source.
-- Use `.env` (local dev) and environment configuration for production secrets (or secret management).
-- Prefer Aiven's managed Postgres with secure SSL settings (e.g., `sslmode=require`).
-- Ensure `SECRET` is strong, rotate periodically.
+### 4. Database & Models (`internal/domain` & `internal/repository`)
+- Use **GORM** for ORM patterns.
+- Models struct tags: `` `gorm:"..." json:"..."` ``.
+- Repositories should encapsulate all DB queries.
+- Use dependency injection to pass `gorm.DB` instances.
 
-Observability & healthchecks
-- The service exposes a simple health endpoint (root `/` or `/health` depending on implementation) — used by the compose healthcheck.
-- Add structured logging (log level, JSON output for production) and request tracing fields (correlation id).
-- Add Prometheus metrics if possible for production readiness.
+### 5. Configuration (`internal/config` & `.env`)
+- Use `github.com/joho/godotenv` to load `.env`.
+- Access config via helper functions (e.g., `config.Config("KEY")`).
+- **Never hardcode secrets**.
 
----
-
-# Java Backend (REMOVED)
-- The Java backend section has been removed from this LLMs.txt. For this repository context, prioritize Go service documentation and configs and avoid instructing agents to rely on Java-specific tooling or JDK requirements.
+## Critical Rules for Go Services
+- **Fiber v3**: Use the `v3` branch of Fiber.
+- **Dependency Injection**: Always inject dependencies (Service -> Repository -> DB) to enable testability.
+- **Error Handling**: Use a centralized error handling mechanism or custom AppError types.
+- **Strict Typing**: Use DTOs for all API requests and responses. Do not use `map[string]interface{}` unless absolutely necessary.
 
 ---
 
