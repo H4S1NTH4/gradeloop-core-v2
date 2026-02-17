@@ -6,7 +6,7 @@ export const UserSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(1),
   is_active: z.boolean(),
-  user_type: z.enum(["student", "employee"]),
+  user_type: z.preprocess((val) => typeof val === 'string' ? val.toLowerCase() : val, z.enum(["student", "employee"])),
   roles: z.array(
     z.object({
       id: z.string().uuid(),
@@ -25,7 +25,7 @@ export type User = z.infer<typeof UserSchema>;
 export const AccessTokenPayloadSchema = z.object({
   sub: z.string().uuid(), // user ID
   email: z.string().email(),
-  user_type: z.enum(["student", "employee"]),
+  user_type: z.preprocess((val) => typeof val === 'string' ? val.toLowerCase() : val, z.enum(["student", "employee"])),
   roles: z.array(z.string()), // role names
   permissions: z.array(z.string()),
   iat: z.number(),

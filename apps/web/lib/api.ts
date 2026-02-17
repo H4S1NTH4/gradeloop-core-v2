@@ -10,14 +10,17 @@ import type { User } from "@/schemas/auth.schema";
 // API Configuration - prefer same-origin in browser to avoid CSP/CORS issues
 // When running in the browser we use a relative path so requests are same-origin
 // and won't be blocked by a Content Security Policy that restricts `connect-src`.
-// Server-side: Use IAM_SERVICE_URL (Docker internal) or fallback to NEXT_PUBLIC_IAM_SERVICE_URL
+// Server-side: Use IAM_SERVICE_URL or NEXT_PUBLIC_IAM_SERVICE_URL. If the
+// frontend is talking to the Krakend gateway, the gateway exposes the
+// public endpoints under `/api/v1` so we append `/api/v1` when a service URL
+// is provided.
 // Client-side: Use NEXT_PUBLIC_IAM_SERVICE_URL (relative path)
 const IAM_SERVICE_URL =
   typeof window === "undefined"
     ? process.env.IAM_SERVICE_URL || process.env.NEXT_PUBLIC_IAM_SERVICE_URL || "http://localhost:8080"
     : process.env.NEXT_PUBLIC_IAM_SERVICE_URL || "";
 const API_BASE_URL = IAM_SERVICE_URL
-  ? `${IAM_SERVICE_URL.replace(/\/+$/g, "")}/v1`
+  ? `${IAM_SERVICE_URL.replace(/\/+$/g, "")}/api/v1`
   : "/api/iam/v1";
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRY_ATTEMPTS = 3;
@@ -34,7 +37,7 @@ const IAMAuthResponseSchema = z.object({
     email: z.string().email(),
     full_name: z.string(),
     is_active: z.boolean(),
-    user_type: z.enum(["student", "employee"]),
+    user_type: z.preprocess((val) => typeof val === 'string' ? val.toLowerCase() : val, z.enum(["student", "employee"])),
     roles: z.array(
       z.object({
         id: z.string().uuid(),
@@ -54,7 +57,7 @@ const IAMRefreshResponseSchema = z.object({
     email: z.string().email(),
     full_name: z.string(),
     is_active: z.boolean(),
-    user_type: z.enum(["student", "employee"]),
+    user_type: z.preprocess((val) => typeof val === 'string' ? val.toLowerCase() : val, z.enum(["student", "employee"])),
     roles: z.array(
       z.object({
         id: z.string().uuid(),

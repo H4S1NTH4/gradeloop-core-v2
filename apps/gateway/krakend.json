@@ -6,17 +6,55 @@
   "timeout": "50000ms",
   "cache_ttl": "300s",
   "output_encoding": "json",
+  "extra_config": {
+    "security/cors": {
+      "allow_origins": [
+        "*"
+      ],
+      "allow_methods": [
+        "POST",
+        "GET",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+      ],
+      "allow_headers": [
+        "Authorization",
+        "Content-Type",
+        "Cookie",
+        "Origin",
+        "Content-Length"
+      ],
+      "expose_headers": [
+        "Content-Length"
+      ],
+      "max_age": "12h"
+    },
+    "router": {
+      "auto_options": true
+    }
+  },
   "endpoints": [
     {
       "endpoint": "/api/v1/auth/login",
       "method": "POST",
       "output_encoding": "json",
+      "input_headers": [
+        "Content-Type",
+        "Cookie"
+      ],
       "backend": [
         {
           "url_pattern": "/auth/login",
           "host": [
             "http://iam-service:8081"
           ],
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          },
           "disable_host_sanitize": true
         }
       ]
@@ -36,6 +74,11 @@
           "host": [
             "http://iam-service:8081"
           ],
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          },
           "disable_host_sanitize": true
         }
       ]
@@ -46,7 +89,8 @@
       "output_encoding": "json",
       "input_headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "Cookie"
       ],
       "backend": [
         {
@@ -54,6 +98,11 @@
           "host": [
             "http://iam-service:8081"
           ],
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          },
           "disable_host_sanitize": true
         }
       ]
@@ -64,7 +113,8 @@
       "output_encoding": "json",
       "input_headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "Cookie"
       ],
       "backend": [
         {
@@ -72,6 +122,11 @@
           "host": [
             "http://iam-service:8081"
           ],
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          },
           "disable_host_sanitize": true
         }
       ]
@@ -80,12 +135,21 @@
       "endpoint": "/api/v1/auth/request-reset",
       "method": "POST",
       "output_encoding": "json",
+      "input_headers": [
+        "Content-Type",
+        "Cookie"
+      ],
       "backend": [
         {
           "url_pattern": "/auth/request-reset",
           "host": [
             "http://iam-service:8081"
           ],
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          },
           "disable_host_sanitize": true
         }
       ]
@@ -94,12 +158,21 @@
       "endpoint": "/api/v1/auth/reset-password",
       "method": "POST",
       "output_encoding": "json",
+      "input_headers": [
+        "Content-Type",
+        "Cookie"
+      ],
       "backend": [
         {
           "url_pattern": "/auth/reset-password",
           "host": [
             "http://iam-service:8081"
           ],
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          },
           "disable_host_sanitize": true
         }
       ]
@@ -110,7 +183,8 @@
       "output_encoding": "json",
       "input_headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "Cookie"
       ],
       "backend": [
         {
@@ -118,6 +192,11 @@
           "host": [
             "http://iam-service:8081"
           ],
+          "extra_config": {
+            "backend/http": {
+              "return_error_code": true
+            }
+          },
           "disable_host_sanitize": true
         }
       ]

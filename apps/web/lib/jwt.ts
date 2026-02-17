@@ -434,7 +434,7 @@ export class RefreshTokenHasher {
   static generateSecureToken(length = 32): string {
     const bytes = new Uint8Array(length);
     globalThis.crypto.getRandomValues(bytes);
-    return Buffer.from(bytes).toString("base64url");
+    return Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
   }
 }
 
@@ -446,7 +446,7 @@ export class CSRFTokenManager {
   static generateToken(): string {
     const bytes = new Uint8Array(32);
     globalThis.crypto.getRandomValues(bytes);
-    return Buffer.from(bytes).toString("base64url");
+    return Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
   }
 
   /**
