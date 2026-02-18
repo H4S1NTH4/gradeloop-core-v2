@@ -66,7 +66,7 @@ export const useLogin = () => {
       if (returnTo) {
         router.push(returnTo);
       } else if (isAdmin) {
-        router.push("/admin/dashboard");
+        router.push("/admin");
       } else {
         router.push("/dashboard");
       }

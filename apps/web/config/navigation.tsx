@@ -42,6 +42,11 @@ export const NAV_ITEMS: NavItem[] = [
 // Admin-specific navigation (only user management for admin sidebar)
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   {
+    label: "Dashboard",
+    href: "/admin",
+    icon: <Icons.dashboard size={18} />,
+  },
+  {
     label: "User Management",
     href: "/admin/users",
     icon: <Icons.users size={18} />,

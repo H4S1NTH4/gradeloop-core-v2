@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef } from "react";
-import { NAV_ITEMS, type NavItem } from "@/config/navigation";
+import { NAV_ITEMS, ADMIN_NAV_ITEMS, type NavItem } from "@/config/navigation";
 import { useAuth } from "@/lib/auth";
 import { usePathname } from "next/navigation";
 import Icons from "@/components/ui/icons";
@@ -92,32 +92,15 @@ export function Sidebar({
       : [];
 
     if (isAdminRoute) {
-      // Admin sidebar should only surface user management (under /admin)
-      // Find the primary User Management entry from NAV_ITEMS and normalize the href
-      const userMgmt = NAV_ITEMS.find((it) => it.label === "User Management");
-      if (!userMgmt) return [];
-
-      // Ensure permission check still applies
-      if (
-        userMgmt.requiredPermissions &&
-        userMgmt.requiredPermissions.length > 0
-      ) {
-        const allowed = userMgmt.requiredPermissions.some((p) =>
+      // Use the dedicated admin navigation items
+      // Check permissions for each item
+      return ADMIN_NAV_ITEMS.filter((item) => {
+        if (!item.requiredPermissions || item.requiredPermissions.length === 0)
+          return true;
+        return item.requiredPermissions.some((p) =>
           permissionMatches(p, userPermissions),
         );
-        if (!allowed) return [];
-      }
-
-      const normalizedHref = userMgmt.href.startsWith("/")
-        ? userMgmt.href
-        : `/${userMgmt.href}`;
-      return [
-        {
-          ...userMgmt,
-          // Make sure admin link is nested under /admin (e.g. /admin/users)
-          href: `/admin${normalizedHref}`,
-        } as NavItem,
-      ];
+      });
     }
 
     // Default: show all NAV_ITEMS that the user has permission to see
@@ -155,9 +138,8 @@ export function Sidebar({
   return (
     <ShellSidebar
       ref={drawerRef}
-      className={`fixed inset-y-0 left-0 z-30 transform lg:transform-none transition-all duration-200 ${
-        open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      } ${collapsed ? "w-[72px] lg:w-[72px]" : "w-[280px] lg:w-[280px]"}`}
+      className={`fixed inset-y-0 left-0 z-30 transform lg:transform-none transition-all duration-200 ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        } ${collapsed ? "w-[72px] lg:w-[72px]" : "w-[280px] lg:w-[280px]"}`}
     >
       <SidebarHeader>
         <div className="flex items-center gap-3">

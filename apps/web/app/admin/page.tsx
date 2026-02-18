@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
-import { UserManagementPage } from "@/features/user-management/components/user-management-page";
+import { DashboardGrid } from "@/features/dashboard/components/DashboardGrid";
 
 /**
  * Admin landing page (mounted at /admin)
@@ -52,13 +52,17 @@ export default function AdminIndexPage() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Page header */}
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Administration</h1>
-        <p className="text-sm text-muted-foreground">Overview and user management</p>
+      <header className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Overview and quick stats
+          </p>
+        </div>
       </header>
 
-      {/* For admins, mount the full User Management UI as the admin dashboard */}
-      <UserManagementPage />
+      {/* For admins, mount the Dashboard Grid as the admin dashboard */}
+      <DashboardGrid />
     </div>
   );
 }
