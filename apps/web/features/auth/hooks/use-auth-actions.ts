@@ -51,10 +51,25 @@ export const useLogin = () => {
         description: `Logged in as ${(data.user as User).full_name}`,
       });
 
-      // Redirect to dashboard or return URL
+      // Redirect to dashboard, admin dashboard, or return URL
       const urlParams = new URLSearchParams(window.location.search);
       const returnTo = urlParams.get("returnTo");
-      router.push(returnTo || "/dashboard");
+
+      const user = data.user as User;
+      const roles = user?.roles ?? [];
+      const isAdmin = roles.some(
+        (r: any) =>
+          (r?.name || "").toLowerCase() === "admin" ||
+          (r?.name || "").toLowerCase().includes("admin"),
+      );
+
+      if (returnTo) {
+        router.push(returnTo);
+      } else if (isAdmin) {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -174,7 +189,7 @@ export const useForgotPassword = () => {
       toast.success("Reset Email Sent", {
         description: "If the email exists, you'll receive reset instructions",
       });
-      
+
       // Still throw error for form handling
       throw error;
     },
@@ -214,7 +229,7 @@ export const useResetPassword = () => {
       toast.error("Password Reset Failed", {
         description: errorMessage,
       });
-      
+
       // Throw error for form handling
       throw error;
     },
@@ -237,14 +252,14 @@ export const useValidateSession = () => {
     },
     onError: (error: any) => {
       console.error("Session validation error:", error);
-      
+
       // Handle rate limiting specifically
       if (error?.status === 429) {
         // Rate limited - don't logout, just wait
         console.warn("Session validation rate limited, will retry");
         return;
       }
-      
+
       // For other errors, logout user
       authStore.logout();
     },

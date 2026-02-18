@@ -3,6 +3,168 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { User, Session, ActiveSession } from "@/schemas/auth.schema";
 
+/**
+ * Permission normalization & session-cookie helpers
+ *
+ * - Normalizes legacy permissions (e.g. "users:manage") and new canonical
+ *   permissions of the form "service:feature:access" (e.g. "iam:users:read").
+ * - Writes a minimal session cookie on `login`/`setSession` and clears it on `logout`.
+ *
+ * Notes:
+ * - Cookies set from client-side JS cannot be HttpOnly. Keep the cookie minimal.
+ * - This cookie is a convenience for other client code (UI rendering) to read
+ *   available permissions without additional round-trips. The source of truth
+ *   remains the server session; always rely on server-side checks for security.
+ */
+
+// Map of legacy actions to canonical access types
+const LEGACY_ACTION_MAP: Record<string, string[]> = {
+  manage: ["create", "read", "update", "delete"],
+  view: ["read"],
+  read: ["read"],
+  create: ["create"],
+  update: ["update"],
+  delete: ["delete"],
+  grade: ["grade"],
+  // add more mappings as needed
+};
+
+function isCanonicalPermission(p: string) {
+  // canonical = service:feature:access (two colons)
+  return (p.match(/:/g) || []).length === 2;
+}
+
+/**
+ * Normalize a single permission to canonical forms.
+ *
+ * Input may be:
+ * - canonical: "iam:users:read" => returns ["iam:users:read"]
+ * - legacy two-part: "users:read" => treats as "iam:users:read"
+ * - legacy action like "users:manage" => expands to multiple canonical perms:
+ *     ["iam:users:create","iam:users:read","iam:users:update","iam:users:delete"]
+ *
+ * If the service is not provided, default to "iam".
+ */
+function normalizePermission(
+  permission: string,
+  defaultService = "iam",
+): string[] {
+  if (!permission || typeof permission !== "string") return [];
+
+  // Already canonical
+  if (isCanonicalPermission(permission)) {
+    return [permission];
+  }
+
+  const parts = permission
+    .split(":")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 2) {
+    const [feature, action] = parts;
+    // If action maps to multiple (manage -> create,read,...)
+    const mapped = LEGACY_ACTION_MAP[action] ?? [action];
+    return mapped.map((a) => `${defaultService}:${feature}:${a}`);
+  }
+
+  // If only one token provided (e.g., "users"), treat as read access
+  if (parts.length === 1) {
+    return [`${defaultService}:${parts[0]}:read`];
+  }
+
+  // Fallback: return original string as-is
+  return [permission];
+}
+
+/**
+ * Normalize an array of permissions and deduplicate.
+ */
+function normalizePermissions(permissions: string[] = []): string[] {
+  const set = new Set<string>();
+  permissions.forEach((p) => {
+    normalizePermission(p).forEach((np) => set.add(np));
+  });
+  return Array.from(set);
+}
+
+/**
+ * Minimal client-side session cookie helpers.
+ *
+ * Cookie content is intentionally minimal: session_id, user_id, permissions (canonical).
+ * The cookie is a session cookie (no explicit expires). Do NOT store sensitive secrets here.
+ */
+const SESSION_COOKIE_NAME = "gradeloop_session";
+
+function safeEncode(obj: unknown) {
+  try {
+    return btoa(JSON.stringify(obj));
+  } catch {
+    return "";
+  }
+}
+
+function safeDecode(s: string) {
+  try {
+    return JSON.parse(atob(s));
+  } catch {
+    return null;
+  }
+}
+
+function setSessionCookie(
+  payload: {
+    session_id?: string | null;
+    user_id?: string | null;
+    permissions?: string[];
+  } | null,
+) {
+  try {
+    if (!payload) {
+      // clear cookie
+      document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0;`;
+      return;
+    }
+    const encoded = safeEncode({
+      session_id: payload.session_id ?? null,
+      user_id: payload.user_id ?? null,
+      permissions: payload.permissions ?? [],
+    });
+
+    // Session cookie (no expires). Use Secure when on https.
+    const secure = location?.protocol === "https:" ? "; Secure" : "";
+    // Lax is a good default for auth-ish cookies opened to UI reading.
+    document.cookie = `${SESSION_COOKIE_NAME}=${encoded}; path=/; SameSite=Lax${secure}`;
+  } catch (e) {
+    // swallow errors; cookies are best-effort UX improvements
+    // eslint-disable-next-line no-console
+    console.warn("setSessionCookie failed", e);
+  }
+}
+
+function clearSessionCookie() {
+  try {
+    document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0;`;
+  } catch {
+    // ignore
+  }
+}
+
+function readSessionCookie() {
+  try {
+    const cookieString = document.cookie || "";
+    const match = cookieString
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith(`${SESSION_COOKIE_NAME}=`));
+    if (!match) return null;
+    const value = match.split("=")[1];
+    const decoded = safeDecode(value);
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
 // Enhanced authentication state interface
 interface AuthState {
   // Core state
@@ -122,6 +284,20 @@ export const useAuthStore = create<AuthState>()(
           state.user = user;
           if (user) {
             state.lastActivity = Date.now();
+            // update session cookie when user changes (keep minimal)
+            try {
+              const cookie = readSessionCookie() ?? {};
+              setSessionCookie({
+                session_id: cookie.session_id ?? state.sessionId,
+                user_id: user?.id ?? null,
+                permissions: normalizePermissions(
+                  // collect permissions from user object if present
+                  user?.roles?.flatMap((r: any) => r.permissions ?? []) ?? [],
+                ),
+              });
+            } catch {
+              // ignore cookie errors
+            }
           }
         }),
 
@@ -131,6 +307,24 @@ export const useAuthStore = create<AuthState>()(
           if (session) {
             state.sessionId = session.id;
             state.lastActivity = Date.now();
+
+            // update the session cookie with session info and permissions (if available)
+            try {
+              const permissions = state.user
+                ? normalizePermissions(
+                    state.user?.roles?.flatMap(
+                      (r: any) => r.permissions ?? [],
+                    ) ?? [],
+                  )
+                : [];
+              setSessionCookie({
+                session_id: session.id ?? null,
+                user_id: state.user?.id ?? null,
+                permissions,
+              });
+            } catch {
+              // ignore
+            }
           }
         }),
 
@@ -145,6 +339,8 @@ export const useAuthStore = create<AuthState>()(
             state.activeSessions = [];
             state.currentSessionId = null;
             state.csrfToken = null;
+            // clear cookie on logout-ish
+            clearSessionCookie();
           }
         }),
 
@@ -211,13 +407,30 @@ export const useAuthStore = create<AuthState>()(
           state.sessionId = sessionId;
           state.currentSessionId = sessionId;
           state.lastActivity = Date.now();
+
+          // write minimal session cookie for UI usage (permissions normalized)
+          try {
+            const permissions = normalizePermissions(
+              user?.roles?.flatMap((r: any) => r.permissions ?? []) ?? [],
+            );
+            setSessionCookie({
+              session_id: sessionId ?? session?.id ?? null,
+              user_id: user?.id ?? null,
+              permissions,
+            });
+          } catch {
+            // ignore cookie write failures
+          }
         }),
 
       logout: () =>
-        set(() => ({
-          ...initialState,
-          lastActivity: Date.now(),
-        })),
+        set(() => {
+          clearSessionCookie();
+          return {
+            ...initialState,
+            lastActivity: Date.now(),
+          };
+        }),
 
       refresh: (expiresAt) =>
         set((state) => {
@@ -239,15 +452,10 @@ export const useAuthStore = create<AuthState>()(
 
       getUserPermissions: () => {
         const { user } = get();
-        const permissions = new Set<string>();
-
-        user?.roles?.forEach((role) => {
-          role.permissions?.forEach((permission) => {
-            permissions.add(permission);
-          });
-        });
-
-        return Array.from(permissions);
+        // Collect raw permissions from roles, then normalize to canonical form
+        const rawPermissions: string[] =
+          user?.roles?.flatMap((role: any) => role.permissions ?? []) ?? [];
+        return normalizePermissions(rawPermissions);
       },
 
       getUserId: () => {
@@ -273,7 +481,11 @@ export const useAuthStore = create<AuthState>()(
 
       hasPermission: (permission) => {
         const { getUserPermissions } = get();
-        return getUserPermissions().includes(permission);
+        const userPermissions = getUserPermissions();
+
+        // Normalize requested permission(s) to canonical list and check any match
+        const normalizedRequested = normalizePermission(permission);
+        return normalizedRequested.some((rp) => userPermissions.includes(rp));
       },
 
       hasAnyRole: (roles) => {
@@ -285,9 +497,12 @@ export const useAuthStore = create<AuthState>()(
       hasAnyPermission: (permissions) => {
         const { getUserPermissions } = get();
         const userPermissions = getUserPermissions();
-        return permissions.some((permission) =>
-          userPermissions.includes(permission),
-        );
+
+        // Accept an array of permission queries and return true if any match
+        return permissions.some((p) => {
+          const normalized = normalizePermission(p);
+          return normalized.some((np) => userPermissions.includes(np));
+        });
       },
 
       // Session Validation Getters

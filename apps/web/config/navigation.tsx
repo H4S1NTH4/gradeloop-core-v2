@@ -39,4 +39,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+// Admin-specific navigation (only user management for admin sidebar)
+export const ADMIN_NAV_ITEMS: NavItem[] = [
+  {
+    label: "User Management",
+    href: "/admin/users",
+    icon: <Icons.users size={18} />,
+    requiredPermissions: ["iam:users:read"],
+  },
+];
+
 export default NAV_ITEMS;

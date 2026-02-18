@@ -30,7 +30,7 @@ services:
     env_file:
       - .env
     environment:
-      - APP_PORT=8082
+      - APP_PORT=${EMAIL_SVC_PORT}
       - DB_HOST=${GRA_DB_HOST}
       - DB_PORT=${GRA_DB_PORT}
       - DB_USER=${GRA_DB_USER}
@@ -62,7 +62,7 @@ services:
       - ./apps/gateway/krakend.json:/etc/krakend/krakend.json
     ports:
       - "8080:8080"
-    command: [ "run", "-c", "/etc/krakend/krakend.json" ]
+    command: ["run", "-c", "/etc/krakend/krakend.json"]
     depends_on:
       - iam-service
     networks:

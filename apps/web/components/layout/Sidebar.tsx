@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { NAV_ITEMS, type NavItem } from "@/config/navigation";
-import { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
+import { usePathname } from "next/navigation";
 import Icons from "@/components/ui/icons";
 import Link from "next/link";
 import Image from "next/image";
@@ -23,16 +23,112 @@ type SidebarProps = {
   onToggleCollapse: () => void;
 };
 
-export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: SidebarProps) {
-  const { user } = useAuth();
-  const userPermissions = user?.permissions ?? [];
+// Helper: allow frontend-required permissions in `iam:resource:action` form to match
+// backend permissions like `RESOURCE_ACTION` (e.g. `iam:users:read` -> `USER_READ`).
+function permissionMatches(required: string, userPermissions: string[]) {
+  if (userPermissions.includes(required)) return true;
 
-  const filtered = useMemo(() => {
-    return NAV_ITEMS.filter((item: NavItem) => {
-      if (!item.requiredPermissions || item.requiredPermissions.length === 0) return true;
-      return item.requiredPermissions.some((p) => userPermissions.includes(p));
+  // If required is in the iam:resource:action form, try to convert
+  const parts = required.split(":");
+  if (parts.length >= 3) {
+    const resource = parts[1];
+    const action = parts[2];
+    // naive singularize: drop trailing 's' if present
+    let res = resource.toUpperCase();
+    if (res.endsWith("S")) res = res.slice(0, -1);
+    // replace any non-alpha with underscore
+    res = res.replace(/[^A-Z]/g, "_");
+    const converted = `${res}_${action.toUpperCase()}`;
+    if (userPermissions.includes(converted)) return true;
+  }
+
+  // Also try the reverse: required might be BACKEND style and userPermissions may contain iam: format
+  for (const up of userPermissions) {
+    if (up === required) return true;
+    const upParts = up.split(":");
+    if (upParts.length >= 3) {
+      // convert user perm iam:resource:action -> RESOURCE_ACTION and compare
+      const r = upParts[1].toUpperCase().endsWith("S")
+        ? upParts[1].toUpperCase().slice(0, -1)
+        : upParts[1].toUpperCase();
+      const a = upParts[2].toUpperCase();
+      const conv = `${r}_${a}`;
+      if (conv === required) return true;
+    }
+  }
+
+  return false;
+}
+
+export function Sidebar({
+  open,
+  onClose,
+  collapsed,
+  onToggleCollapse,
+}: SidebarProps) {
+  const { user } = useAuth();
+  const pathname = usePathname() ?? "/";
+
+  // Determine whether we're in the admin area
+  const isAdminRoute = useMemo(() => {
+    return (
+      typeof pathname === "string" &&
+      (pathname === "/admin" ||
+        pathname.startsWith("/admin/") ||
+        pathname === "/admin")
+    );
+  }, [pathname]);
+
+  // Build a stable string key for permissions so we can use it safely in deps
+  const permissionsKey = useMemo(
+    () => (user?.permissions ?? []).join("|"),
+    [user?.permissions],
+  );
+
+  // Compute the visible navigation items based on route and permissions
+  const filtered = useMemo<NavItem[]>(() => {
+    const userPermissions = permissionsKey
+      ? permissionsKey.split("|").filter(Boolean)
+      : [];
+
+    if (isAdminRoute) {
+      // Admin sidebar should only surface user management (under /admin)
+      // Find the primary User Management entry from NAV_ITEMS and normalize the href
+      const userMgmt = NAV_ITEMS.find((it) => it.label === "User Management");
+      if (!userMgmt) return [];
+
+      // Ensure permission check still applies
+      if (
+        userMgmt.requiredPermissions &&
+        userMgmt.requiredPermissions.length > 0
+      ) {
+        const allowed = userMgmt.requiredPermissions.some((p) =>
+          permissionMatches(p, userPermissions),
+        );
+        if (!allowed) return [];
+      }
+
+      const normalizedHref = userMgmt.href.startsWith("/")
+        ? userMgmt.href
+        : `/${userMgmt.href}`;
+      return [
+        {
+          ...userMgmt,
+          // Make sure admin link is nested under /admin (e.g. /admin/users)
+          href: `/admin${normalizedHref}`,
+        } as NavItem,
+      ];
+    }
+
+    // Default: show all NAV_ITEMS that the user has permission to see
+    return NAV_ITEMS.filter((item) => {
+      if (!item.requiredPermissions || item.requiredPermissions.length === 0)
+        return true;
+      return item.requiredPermissions.some((p) =>
+        permissionMatches(p, userPermissions),
+      );
     });
-  }, [userPermissions]);
+  }, [permissionsKey, isAdminRoute]);
 
   const drawerRef = useRef<HTMLDivElement | null>(null);
 
@@ -60,19 +156,33 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: SidebarP
     <ShellSidebar
       ref={drawerRef}
       className={`fixed inset-y-0 left-0 z-30 transform lg:transform-none transition-all duration-200 ${
-          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        } ${collapsed ? 'w-[72px] lg:w-[72px]' : 'w-[280px] lg:w-[280px]'}`}
+        open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      } ${collapsed ? "w-[72px] lg:w-[72px]" : "w-[280px] lg:w-[280px]"}`}
     >
       <SidebarHeader>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 relative">
-            <Image src="/brand/assets/logo.png" alt="GradeLoop logo" fill className="object-contain" />
+            <Image
+              src="/brand/assets/logo.png"
+              alt="GradeLoop logo"
+              fill
+              className="object-contain"
+            />
           </div>
-          <span className={`font-semibold text-sidebar-foreground hidden lg:block ${collapsed ? 'lg:hidden' : ''}`}>GradeLoop</span>
+          <span
+            className={`font-semibold text-sidebar-foreground hidden lg:block ${collapsed ? "lg:hidden" : ""}`}
+          >
+            GradeLoop
+          </span>
         </div>
 
         <div className="ml-auto lg:hidden">
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close sidebar">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label="Close sidebar"
+          >
             <Icons.x size={18} />
           </Button>
         </div>
@@ -81,12 +191,14 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: SidebarP
       <SidebarContent>
         <div className="p-3 space-y-1">
           {filtered.map((item) => {
-            const linkClass = `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} truncate w-full`;
-            const labelClass = `hidden md:inline-block truncate ${collapsed ? 'md:hidden' : ''}`;
+            const linkClass = `flex items-center ${collapsed ? "justify-center" : "gap-3"} truncate w-full`;
+            const labelClass = `hidden md:inline-block truncate ${collapsed ? "md:hidden" : ""}`;
             return (
               <SidebarMenuButton key={item.href} asChild>
                 <Link href={item.href} className={linkClass}>
-                  <span className="shrink-0 text-lg">{item.icon ?? <Icons.dashboard size={18} />}</span>
+                  <span className="shrink-0 text-lg">
+                    {item.icon ?? <Icons.dashboard size={18} />}
+                  </span>
                   <span className={labelClass}>{item.label}</span>
                 </Link>
               </SidebarMenuButton>
@@ -97,10 +209,17 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: SidebarP
 
       <SidebarFooter>
         <div className="flex items-center gap-2 w-full">
-          <Button aria-label="Collapse sidebar" variant="ghost" onClick={onToggleCollapse} className="p-2">
+          <Button
+            aria-label="Collapse sidebar"
+            variant="ghost"
+            onClick={onToggleCollapse}
+            className="p-2"
+          >
             <Icons.chevronLeft size={18} />
           </Button>
-          <div className="ml-2 text-sm text-sidebar-foreground truncate">{/* user name optional */}</div>
+          <div className="ml-2 text-sm text-sidebar-foreground truncate">
+            {/* user name optional */}
+          </div>
         </div>
       </SidebarFooter>
     </ShellSidebar>
