@@ -1,44 +1,42 @@
-# GradeLoop Web Client
+# sv
 
-Next.js 16 web application for GradeLoop LMS.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## Environment Configuration
+## Creating a project
 
-**This app uses the root `.env` file** via symlink (`.env.local` → `../../.env`).
+If you're seeing this, you've probably already done this step. Congrats!
 
-All environment variables are managed in the project root. Do not create separate .env files in this directory.
-
-For local development without authentication:
-```bash
-# In root .env file:
-DISABLE_AUTH=true
+```sh
+# create a new project
+npx sv create my-app
 ```
 
-## Getting Started
+To recreate this project with the same configuration:
 
-Run the development server:
-
-```bash
-bun dev
+```sh
+# recreate this project
+bun x sv create --template minimal --types ts --add tailwindcss="plugins:none" --install bun web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Developing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sh
+npm run dev
 
-## Learn More
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Building
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To create a production version of your app:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sh
+npm run build
+```
 
-## Deploy on Vercel
+You can preview the production build with `npm run preview`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
