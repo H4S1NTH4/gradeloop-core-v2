@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/gradeloop/iam-service/internal/dto"
 	"github.com/gradeloop/iam-service/internal/service"
 )
@@ -36,6 +39,65 @@ func (h *UserHandler) CreateUser(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(response)
+}
+
+// GetUsers returns a paginated list of users
+func (h *UserHandler) GetUsers(c fiber.Ctx) error {
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(c.Query("limit", "10"))
+	if err != nil {
+		limit = 10
+	}
+
+	response, err := h.userService.GetUsers(c.RequestCtx(), page, limit)
+	if err != nil {
+		return handleUserError(err)
+	}
+
+	return c.JSON(response)
+}
+
+// UpdateUser updates an existing user
+func (h *UserHandler) UpdateUser(c fiber.Ctx) error {
+	id := c.Params("id")
+	var req dto.UpdateUserRequest
+
+	if err := c.Bind().Body(&req); err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	response, err := h.userService.UpdateUser(c.RequestCtx(), id, &req)
+	if err != nil {
+		return handleUserError(err)
+	}
+
+	return c.JSON(response)
+}
+
+// DeleteUser soft deletes a user
+func (h *UserHandler) DeleteUser(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	if err := h.userService.DeleteUser(c.RequestCtx(), id); err != nil {
+		return handleUserError(err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// RestoreUser restores a soft deleted user
+func (h *UserHandler) RestoreUser(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	if err := h.userService.RestoreUser(c.RequestCtx(), id); err != nil {
+		return handleUserError(err)
+	}
+
+	return c.SendStatus(fiber.StatusOK)
 }
 
 func handleUserError(err error) error {

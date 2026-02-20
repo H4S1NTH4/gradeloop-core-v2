@@ -15,6 +15,9 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
 	SoftDeleteUser(ctx context.Context, userID uuid.UUID) error
+	RestoreUser(ctx context.Context, userID uuid.UUID) error
+	GetUsers(ctx context.Context, offset, limit int) ([]*domain.User, error)
+	CountUsers(ctx context.Context) (int64, error)
 	RoleExists(ctx context.Context, roleID uuid.UUID) (bool, error)
 }
 
@@ -112,6 +115,38 @@ func (r *userRepository) SoftDeleteUser(ctx context.Context, userID uuid.UUID) e
 	}
 
 	return tx.Commit().Error
+}
+
+func (r *userRepository) RestoreUser(ctx context.Context, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Unscoped().
+		Where("id = ?", userID).
+		Update("deleted_at", nil).Error
+}
+
+func (r *userRepository) GetUsers(ctx context.Context, offset, limit int) ([]*domain.User, error) {
+	var users []*domain.User
+
+	query := r.db.WithContext(ctx).
+		Preload("Role").
+		Limit(limit).
+		Offset(offset).
+		Find(&users)
+
+	if query.Error != nil {
+		return nil, query.Error
+	}
+
+	return users, nil
+}
+
+func (r *userRepository) CountUsers(ctx context.Context) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&domain.User{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (r *userRepository) RoleExists(ctx context.Context, roleID uuid.UUID) (bool, error) {

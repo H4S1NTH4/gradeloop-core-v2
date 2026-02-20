@@ -29,6 +29,10 @@ var (
 type UserService interface {
 	CreateUser(ctx context.Context, req *dto.CreateUserRequest, actorPermissions []string) (*dto.CreateUserResponse, error)
 	ActivateUser(ctx context.Context, token, password string) (*dto.ActivateUserResponse, error)
+	GetUsers(ctx context.Context, page, limit int) (*dto.GetUsersResponse, error)
+	UpdateUser(ctx context.Context, id string, req *dto.UpdateUserRequest) (*dto.UpdateUserResponse, error)
+	DeleteUser(ctx context.Context, id string) error
+	RestoreUser(ctx context.Context, id string) error
 }
 
 type userService struct {
@@ -195,6 +199,148 @@ func (s *userService) ActivateUser(ctx context.Context, token, password string) 
 		Message:  "Account activated successfully. You can now login.",
 		Username: user.Username,
 	}, nil
+}
+
+func (s *userService) GetUsers(ctx context.Context, page, limit int) (*dto.GetUsersResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	users, err := s.userRepo.GetUsers(ctx, offset, limit)
+	if err != nil {
+		return nil, fmt.Errorf("fetching users: %w", err)
+	}
+
+	totalCount, err := s.userRepo.CountUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("counting users: %w", err)
+	}
+
+	var userResponses []dto.UserResponse
+	for _, user := range users {
+		roleName := ""
+		if user.Role != nil {
+			roleName = user.Role.Name
+		}
+
+		var roleID uuid.UUID
+		if user.RoleID != nil {
+			roleID = *user.RoleID
+		}
+
+		userResponses = append(userResponses, dto.UserResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			Email:     user.Email,
+			RoleID:    roleID,
+			RoleName:  roleName,
+			IsActive:  user.IsActive,
+			CreatedAt: user.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return &dto.GetUsersResponse{
+		Users:      userResponses,
+		TotalCount: totalCount,
+		Page:       page,
+		Limit:      limit,
+	}, nil
+}
+
+func (s *userService) UpdateUser(ctx context.Context, id string, req *dto.UpdateUserRequest) (*dto.UpdateUserResponse, error) {
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching user: %w", err)
+	}
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	if req.RoleID != nil {
+		roleID, err := uuid.Parse(*req.RoleID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid role ID: %w", err)
+		}
+
+		roleExists, err := s.userRepo.RoleExists(ctx, roleID)
+		if err != nil {
+			return nil, fmt.Errorf("checking role: %w", err)
+		}
+		if !roleExists {
+			return nil, ErrRoleNotFound
+		}
+		user.RoleID = &roleID
+	}
+
+	if req.IsActive != nil {
+		user.IsActive = *req.IsActive
+	}
+
+	if err := s.userRepo.UpdateUser(ctx, user); err != nil {
+		return nil, fmt.Errorf("updating user: %w", err)
+	}
+
+	var roleID uuid.UUID
+	if user.RoleID != nil {
+		roleID = *user.RoleID
+	}
+
+	return &dto.UpdateUserResponse{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+		RoleID:   roleID,
+		IsActive: user.IsActive,
+		Message:  "User updated successfully",
+	}, nil
+}
+
+func (s *userService) DeleteUser(ctx context.Context, id string) error {
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	// Check if user exists
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("fetching user: %w", err)
+	}
+	if user == nil {
+		return ErrUserNotFound
+	}
+
+	if err := s.userRepo.SoftDeleteUser(ctx, userID); err != nil {
+		return fmt.Errorf("deleting user: %w", err)
+	}
+
+	return nil
+}
+
+func (s *userService) RestoreUser(ctx context.Context, id string) error {
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	// We can't check if user exists with GetUserByID because it filters out soft deleted users
+	// But RestoreUser in repo should handle it or we can add FindWithDeleted to repo.
+	// For now, let's rely on RestoreUser repo method which uses Unscoped.
+
+	if err := s.userRepo.RestoreUser(ctx, userID); err != nil {
+		return fmt.Errorf("restoring user: %w", err)
+	}
+
+	return nil
 }
 
 // generateTempPassword generates a cryptographically secure random password
