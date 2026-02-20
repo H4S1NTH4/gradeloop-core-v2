@@ -81,17 +81,30 @@ export function SidebarNav() {
             </SidebarContent>
 
             <SidebarFooter className="border-t p-4">
-                <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 font-semibold text-xs text-primary">
-                        {user.name.split(" ").map(n => n[0]).join("")}
-                    </div>
-                    {state === "expanded" && (
-                        <div className="flex flex-col truncate">
-                            <span className="text-sm font-medium text-white">{user.name}</span>
-                            <span className="text-xs text-zinc-500 truncate">{user.email}</span>
+                {user ? (
+                    <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 font-semibold text-xs text-primary">
+                            {user.name?.split(" ").map(n => n[0]).join("") || "U"}
                         </div>
-                    )}
-                </div>
+                        {state === "expanded" && (
+                            <div className="flex flex-col truncate">
+                                <span className="text-sm font-medium text-white">{user.name}</span>
+                                <span className="text-xs text-zinc-500 truncate">{user.email}</span>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 font-semibold text-xs text-primary">
+                            ?
+                        </div>
+                        {state === "expanded" && (
+                            <div className="flex flex-col truncate">
+                                <span className="text-sm font-medium text-white">Not logged in</span>
+                            </div>
+                        )}
+                    </div>
+                )}
             </SidebarFooter>
         </Sidebar>
     );

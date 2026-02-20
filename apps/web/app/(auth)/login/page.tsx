@@ -16,6 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 
+import { useAuthStore } from "@/store/auth-store";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 const loginSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
     password: z.string().min(8, { message: "Password must be at least 8 characters" }),
@@ -25,6 +29,10 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+    const { login } = useAuthStore();
+    const router = useRouter();
+    const [error, setError] = useState<string | null>(null);
+
     const form = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
@@ -35,8 +43,13 @@ export default function LoginPage() {
     });
 
     async function onSubmit(values: LoginValues) {
-        console.log(values);
-        // TODO: Implement authentication logic
+        setError(null);
+        try {
+            await login(values.email, values.password);
+            router.push("/dashboard");
+        } catch (err: any) {
+            setError(err.response?.data?.message || "Invalid email or password");
+        }
     }
 
     return (
@@ -50,6 +63,11 @@ export default function LoginPage() {
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    {error && (
+                        <div className="p-3 text-sm font-medium text-destructive bg-destructive/10 rounded-md">
+                            {error}
+                        </div>
+                    )}
                     <FormField
                         control={form.control}
                         name="email"
