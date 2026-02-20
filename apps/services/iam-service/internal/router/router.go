@@ -18,8 +18,11 @@ type Config struct {
 func SetupRoutes(app *fiber.App, cfg Config) {
 	cfg.HealthHandler.RegisterRoutes(app)
 
+	// API v1 group
+	api := app.Group("/api/v1")
+
 	// Public auth routes
-	auth := app.Group("/auth")
+	auth := api.Group("/auth")
 	auth.Post("/login", cfg.AuthHandler.Login)
 	auth.Post("/refresh", cfg.AuthHandler.RefreshToken)
 	auth.Post("/logout", cfg.AuthHandler.Logout)
@@ -28,11 +31,11 @@ func SetupRoutes(app *fiber.App, cfg Config) {
 	auth.Post("/reset-password", cfg.AuthHandler.ResetPassword)
 
 	// Protected auth routes (require authentication)
-	authProtected := app.Group("/auth", middleware.AuthMiddleware(cfg.JWTSecretKey))
+	authProtected := api.Group("/auth", middleware.AuthMiddleware(cfg.JWTSecretKey))
 	authProtected.Post("/change-password", cfg.AuthHandler.ChangePassword)
 
 	// User routes with authentication middleware (admin-only operations)
-	users := app.Group("/users", middleware.AuthMiddleware(cfg.JWTSecretKey))
+	users := api.Group("/users", middleware.AuthMiddleware(cfg.JWTSecretKey))
 	users.Get("/", middleware.RequirePermission("users:read"), cfg.UserHandler.GetUsers)
 	users.Post("/", middleware.RequirePermission("users:write"), cfg.UserHandler.CreateUser)
 	users.Put("/:id", middleware.RequirePermission("users:write"), cfg.UserHandler.UpdateUser)
@@ -40,7 +43,7 @@ func SetupRoutes(app *fiber.App, cfg Config) {
 	users.Post("/:id/restore", middleware.RequirePermission("users:write"), cfg.UserHandler.RestoreUser)
 
 	// Role routes with authentication middleware
-	roles := app.Group("/roles", middleware.AuthMiddleware(cfg.JWTSecretKey))
+	roles := api.Group("/roles", middleware.AuthMiddleware(cfg.JWTSecretKey))
 	roles.Get("/", cfg.RoleHandler.GetAllRoles)
 	roles.Get("/:id", cfg.RoleHandler.GetRoleByID)
 	roles.Post("/", middleware.RequirePermission("roles:write"), cfg.RoleHandler.CreateRole)
@@ -49,12 +52,12 @@ func SetupRoutes(app *fiber.App, cfg Config) {
 	roles.Post("/:id/permissions", middleware.RequirePermission("roles:write"), cfg.RoleHandler.AssignPermission)
 
 	// Permission routes with authentication middleware
-	permissions := app.Group("/permissions", middleware.AuthMiddleware(cfg.JWTSecretKey))
+	permissions := api.Group("/permissions", middleware.AuthMiddleware(cfg.JWTSecretKey))
 	permissions.Get("/", cfg.PermissionHandler.GetAllPermissions)
 	permissions.Post("/", middleware.RequirePermission("permissions:write"), cfg.PermissionHandler.CreatePermission)
 
 	// Admin routes with authentication middleware
-	adminProtected := app.Group("", middleware.AuthMiddleware(cfg.JWTSecretKey))
+	adminProtected := api.Group("", middleware.AuthMiddleware(cfg.JWTSecretKey))
 	cfg.AuthHandler.RegisterAdminRoutes(adminProtected)
 
 	app.Get("/", func(c fiber.Ctx) error {

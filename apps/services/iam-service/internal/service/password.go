@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
+	"unicode"
 
 	"github.com/google/uuid"
 	"github.com/gradeloop/iam-service/internal/domain"
@@ -33,7 +33,6 @@ var (
 // - At least one lowercase letter
 // - At least one digit
 // - At least one special character
-var passwordStrengthRegex = regexp.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$`)
 
 type PasswordService interface {
 	ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) (*dto.ChangePasswordResponse, error)
@@ -250,7 +249,27 @@ func validatePasswordStrength(password string) error {
 		return ErrPasswordTooWeak
 	}
 
-	if !passwordStrengthRegex.MatchString(password) {
+	var (
+		hasUpper   bool
+		hasLower   bool
+		hasNumber  bool
+		hasSpecial bool
+	)
+
+	for _, char := range password {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsNumber(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+
+	if !(hasUpper && hasLower && hasNumber && hasSpecial) {
 		return ErrPasswordTooWeak
 	}
 

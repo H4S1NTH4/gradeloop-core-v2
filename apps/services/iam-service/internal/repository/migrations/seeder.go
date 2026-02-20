@@ -54,9 +54,11 @@ func (s *Seeder) seedRoles() error {
 		{Name: "student", IsSystemRole: true},
 	}
 
-	for _, role := range roles {
-		role.ID = uuid.New()
-		if err := s.db.Where(domain.Role{Name: role.Name}).FirstOrCreate(&role).Error; err != nil {
+	for _, roleData := range roles {
+		var role domain.Role
+		if err := s.db.Where(domain.Role{Name: roleData.Name}).
+			Attrs(domain.Role{ID: uuid.New(), IsSystemRole: roleData.IsSystemRole}).
+			FirstOrCreate(&role).Error; err != nil {
 			return err
 		}
 		s.logger.Info("seeded role", zap.String("name", role.Name))
@@ -81,9 +83,11 @@ func (s *Seeder) seedPermissions() error {
 		{Name: "employees:write", Description: "Manage employee profiles"},
 	}
 
-	for _, perm := range permissions {
-		perm.ID = uuid.New()
-		if err := s.db.Where(domain.Permission{Name: perm.Name}).FirstOrCreate(&perm).Error; err != nil {
+	for _, permData := range permissions {
+		var perm domain.Permission
+		if err := s.db.Where(domain.Permission{Name: permData.Name}).
+			Attrs(domain.Permission{ID: uuid.New(), Description: permData.Description}).
+			FirstOrCreate(&perm).Error; err != nil {
 			return err
 		}
 		s.logger.Info("seeded permission", zap.String("name", perm.Name))
