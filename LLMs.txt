@@ -12,58 +12,26 @@ This project uses **Next.js** with the **Bun** runtime. The UI is built with **S
 
 - **Runtime**: Bun (Strictly use `bun` for scripts and package management)
 - **Framework**: Next.js (App Router)
-- **UI Components**: ShadCN UI (Radix UI primitives + Tailwind CSS)
+- **UI Components**:
+  - **Aceternity UI**: [ui.aceternity.com](https://ui.aceternity.com/) (For complex/advanced UI components)
+  - **ShadCN UI**: [ui.shadcn.com](https://ui.shadcn.com/) (For core primitives and layout components)
+- **Icons**:
+  - **Animate UI**: [animate-ui.com](https://animate-ui.com/) (For animated icons)
+  - **Lucide React**: (For standard icons)
 - **Styling**: TailwindCSS
 - **State Management**: Zustand
 - **Data Fetching**: React Query (TanStack Query)
-- **Animation**: Motion (Framer Motion)
+- **Animation**: Motion (motion not framer-motion)
 - **Form Handling**: React Hook Form
 - **Validation**: Zod (Schema-first development)
-- **Icons**: Lucide React
 
-## ShadCN UI Configuration
+## UI Guidelines
 
-> shadcn/ui is a collection of beautifully-designed, accessible components and a code distribution platform. It is built with TypeScript, Tailwind CSS, and Radix UI primitives.
+> Follow clean, modern, and accessible design principles. Use standard Tailwind CSS utility classes and ShadCN/Aceternity primitives without hardcoding restrictive color palettes.
 
 ### Installation & Management
 - CLI: `bunx shadcn@latest add <component>`
 - Configuration: `components.json`
-
-### Theme Configuration
-Using **GradeLoop 2.0 Color Palette** (derived from landing page).
-
-### Color Palette Reference
-
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `primary` | `#3b82f6` | Blue 500 (Primary Brand) |
-| `background` | `#ffffff` | Light Mode Background |
-| `background-dark` | `#09090b` | Dark Mode Background (Zinc 950) |
-| `card-dark` | `#18181b` | Dark Mode Card (Zinc 900) |
-| `brand-green` | `#4ade80` | Green 400 (Secondary Brand/Gradient) |
-| `brand-blue` | `#0ea5e9` | Sky 500 (Secondary Brand/Gradient) |
-| `slate-900` | `#0f172a` | Light Mode Text |
-| `zinc-200` | `#e4e4e7` | Light Mode Border/Input |
-
-### CSS Variable Mapping (HSL)
-
-#### Light Mode
-- `--background`: `0 0% 100%` (#ffffff)
-- `--foreground`: `222 47% 11%` (Slate 900)
-- `--primary`: `217 91% 60%` (Blue 500)
-- `--card`: `0 0% 100%`
-- `--border`: `240 5.9% 90%` (Zinc 200)
-
-#### Dark Mode
-- `--background`: `240 10% 3.9%` (Zinc 950)
-- `--foreground`: `210 40% 98%` (Slate 50)
-- `--primary`: `217 91% 60%` (Blue 500)
-- `--card`: `240 5.9% 10%` (Zinc 900)
-- `--border`: `240 3.7% 15.9%` (Zinc 800)
-
-#### Brand Gradients
-- Green: `142 76% 58%` (#4ade80)
-- Blue: `199 89% 48%` (#0ea5e9)
 
 ## Project Structure Reference
 ```
