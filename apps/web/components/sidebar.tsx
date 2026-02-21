@@ -17,7 +17,7 @@ import { useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { useRouter } from "next/navigation";
 
-type Role = "admin" | "instructor" | "student";
+type Role = "admin" | "super_admin" | "instructor" | "student";
 
 interface NavItem {
   label: string;
@@ -67,7 +67,7 @@ const getNavItemsByRole = (role: Role): NavItem[] => {
         {
           label: "Students",
           href: "/instructor/students",
-          icon: <StudentIcon className="h-4 w-4" />,
+          icon: <GraduationCap className="h-4 w-4" />,
         },
         {
           label: "Profile",

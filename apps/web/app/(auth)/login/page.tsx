@@ -62,17 +62,17 @@ export default function LoginPage() {
       }
 
       if (role === "admin" || role === "super_admin") {
-        router.push("/admin/dashboard");
+        router.push("/admin/");
         return;
       }
 
       if (role === "instructor") {
-        router.push("/instructor/dashboard");
+        router.push("/instructor/");
         return;
       }
 
       if (role === "student") {
-        router.push("/student/dashboard");
+        router.push("/student/");
         return;
       }
 
