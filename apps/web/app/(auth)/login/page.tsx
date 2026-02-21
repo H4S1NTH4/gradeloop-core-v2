@@ -46,7 +46,33 @@ export default function LoginPage() {
         setError(null);
         try {
             await login(values.email, values.password);
-            router.push("/dashboard");
+
+            // After login, redirect based on role stored in AuthStore
+            const currentUser = useAuthStore.getState().user;
+            const role = currentUser?.role;
+
+            if (currentUser?.requiresPasswordReset) {
+                router.push("/auth/reset-password");
+                return;
+            }
+
+            if (role === "admin" || role === "super_admin") {
+                router.push("/admin/dashboard");
+                return;
+            }
+
+            if (role === "instructor") {
+                router.push("/instructor/dashboard");
+                return;
+            }
+
+            if (role === "student") {
+                router.push("/student/dashboard");
+                return;
+            }
+
+            // Fallback route
+            router.push("/");
         } catch (err: any) {
             setError(err.response?.data?.message || "Invalid email or password");
         }

@@ -16,9 +16,11 @@ type UserRepository interface {
 	UpdateUser(ctx context.Context, user *domain.User) error
 	SoftDeleteUser(ctx context.Context, userID uuid.UUID) error
 	RestoreUser(ctx context.Context, userID uuid.UUID) error
-	GetUsers(ctx context.Context, offset, limit int) ([]*domain.User, error)
-	CountUsers(ctx context.Context) (int64, error)
+	GetUsers(ctx context.Context, offset, limit int, userType string) ([]*domain.User, error)
+	CountUsers(ctx context.Context, userType string) (int64, error)
 	RoleExists(ctx context.Context, roleID uuid.UUID) (bool, error)
+	CreateStudentProfile(ctx context.Context, profile *domain.UserProfileStudent) error
+	CreateEmployeeProfile(ctx context.Context, profile *domain.UserProfileEmployee) error
 }
 
 type userRepository struct {
@@ -33,18 +35,28 @@ func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) erro
 	return r.db.WithContext(ctx).Create(user).Error
 }
 
+func (r *userRepository) CreateStudentProfile(ctx context.Context, profile *domain.UserProfileStudent) error {
+	return r.db.WithContext(ctx).Create(profile).Error
+}
+
+func (r *userRepository) CreateEmployeeProfile(ctx context.Context, profile *domain.UserProfileEmployee) error {
+	return r.db.WithContext(ctx).Create(profile).Error
+}
+
 func (r *userRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
 	var user domain.User
 
 	query := r.db.WithContext(ctx).
-		Preload("Role").
-		First(&user, userID)
+		Preload("Role")
 
-	if query.Error != nil {
-		if query.Error == gorm.ErrRecordNotFound {
+	// Dynamic profile preloading would be nice, but for now let's just use it in GetUsers
+	// or we can add it here if needed.
+
+	if err := query.First(&user, userID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
-		return nil, query.Error
+		return nil, err
 	}
 
 	return &user, nil
@@ -125,14 +137,18 @@ func (r *userRepository) RestoreUser(ctx context.Context, userID uuid.UUID) erro
 		Update("deleted_at", nil).Error
 }
 
-func (r *userRepository) GetUsers(ctx context.Context, offset, limit int) ([]*domain.User, error) {
+func (r *userRepository) GetUsers(ctx context.Context, offset, limit int, userType string) ([]*domain.User, error) {
 	var users []*domain.User
 
-	query := r.db.WithContext(ctx).
-		Preload("Role").
-		Limit(limit).
-		Offset(offset).
-		Find(&users)
+	db := r.db.WithContext(ctx).Preload("Role")
+
+	if userType == "student" {
+		db = db.Joins("INNER JOIN user_profile_students ON user_profile_students.user_id = users.id")
+	} else if userType == "employee" {
+		db = db.Joins("INNER JOIN user_profile_employees ON user_profile_employees.user_id = users.id")
+	}
+
+	query := db.Limit(limit).Offset(offset).Find(&users)
 
 	if query.Error != nil {
 		return nil, query.Error
@@ -141,9 +157,17 @@ func (r *userRepository) GetUsers(ctx context.Context, offset, limit int) ([]*do
 	return users, nil
 }
 
-func (r *userRepository) CountUsers(ctx context.Context) (int64, error) {
+func (r *userRepository) CountUsers(ctx context.Context, userType string) (int64, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&domain.User{}).Count(&count).Error; err != nil {
+	db := r.db.WithContext(ctx).Model(&domain.User{})
+
+	if userType == "student" {
+		db = db.Joins("INNER JOIN user_profile_students ON user_profile_students.user_id = users.id")
+	} else if userType == "employee" {
+		db = db.Joins("INNER JOIN user_profile_employees ON user_profile_employees.user_id = users.id")
+	}
+
+	if err := db.Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil

@@ -105,7 +105,13 @@ func run() error {
 	)
 
 	healthHandler := handler.NewHealthHandler()
-	authHandler := handler.NewAuthHandler(authService, userService, passwordService)
+	authHandler := handler.NewAuthHandler(
+		authService,
+		userService,
+		passwordService,
+		cfg.JWT.CookieSecure,
+		cfg.JWT.CookieSameSite,
+	)
 	userHandler := handler.NewUserHandler(userService)
 	roleHandler := handler.NewRoleHandler(roleService)
 	permissionHandler := handler.NewPermissionHandler(permissionService)

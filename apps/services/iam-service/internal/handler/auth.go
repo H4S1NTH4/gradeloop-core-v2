@@ -13,17 +13,23 @@ type AuthHandler struct {
 	authService     service.AuthService
 	userService     service.UserService
 	passwordService service.PasswordService
+	cookieSecure    bool
+	cookieSameSite  string
 }
 
 func NewAuthHandler(
 	authService service.AuthService,
 	userService service.UserService,
 	passwordService service.PasswordService,
+	cookieSecure bool,
+	cookieSameSite string,
 ) *AuthHandler {
 	return &AuthHandler{
 		authService:     authService,
 		userService:     userService,
 		passwordService: passwordService,
+		cookieSecure:    cookieSecure,
+		cookieSameSite:  cookieSameSite,
 	}
 }
 
@@ -64,10 +70,11 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	cookie := new(fiber.Cookie)
 	cookie.Name = "refresh_token"
 	cookie.Value = response.RefreshToken
+	cookie.Path = "/"
 	cookie.Expires = time.Now().Add(7 * 24 * time.Hour) // 7 days (should match service config)
 	cookie.HTTPOnly = true
-	cookie.Secure = true // Enable in production
-	cookie.SameSite = "Strict"
+	cookie.Secure = h.cookieSecure
+	cookie.SameSite = h.cookieSameSite
 
 	c.Cookie(cookie)
 
@@ -93,10 +100,11 @@ func (h *AuthHandler) RefreshToken(c fiber.Ctx) error {
 	cookie := new(fiber.Cookie)
 	cookie.Name = "refresh_token"
 	cookie.Value = response.RefreshToken
+	cookie.Path = "/"
 	cookie.Expires = time.Now().Add(7 * 24 * time.Hour)
 	cookie.HTTPOnly = true
-	cookie.Secure = true
-	cookie.SameSite = "Strict"
+	cookie.Secure = h.cookieSecure
+	cookie.SameSite = h.cookieSameSite
 
 	c.Cookie(cookie)
 
@@ -119,10 +127,11 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	// Clear refresh token cookie
 	cookie := new(fiber.Cookie)
 	cookie.Name = "refresh_token"
+	cookie.Path = "/"
 	cookie.Expires = time.Now().Add(-1 * time.Hour)
 	cookie.HTTPOnly = true
-	cookie.Secure = true
-	cookie.SameSite = "Strict"
+	cookie.Secure = h.cookieSecure
+	cookie.SameSite = h.cookieSameSite
 
 	c.Cookie(cookie)
 

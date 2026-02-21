@@ -38,9 +38,12 @@ type UserWithRole struct {
 // User DTOs
 
 type CreateUserRequest struct {
-	Username string `json:"username" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
-	RoleID   string `json:"role_id" validate:"required"`
+	Username    string `json:"username" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
+	RoleID      string `json:"role_id" validate:"required"`
+	UserType    string `json:"user_type" validate:"required,oneof=student employee all"`
+	StudentID   string `json:"student_id"`
+	Designation string `json:"designation"`
 }
 
 type CreateUserResponse struct {

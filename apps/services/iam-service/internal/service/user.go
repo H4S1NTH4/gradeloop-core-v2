@@ -29,7 +29,7 @@ var (
 type UserService interface {
 	CreateUser(ctx context.Context, req *dto.CreateUserRequest, actorPermissions []string) (*dto.CreateUserResponse, error)
 	ActivateUser(ctx context.Context, token, password string) (*dto.ActivateUserResponse, error)
-	GetUsers(ctx context.Context, page, limit int) (*dto.GetUsersResponse, error)
+	GetUsers(ctx context.Context, page, limit int, userType string) (*dto.GetUsersResponse, error)
 	UpdateUser(ctx context.Context, id string, req *dto.UpdateUserRequest) (*dto.UpdateUserResponse, error)
 	DeleteUser(ctx context.Context, id string) error
 	RestoreUser(ctx context.Context, id string) error
@@ -114,7 +114,14 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 		return nil, fmt.Errorf("hashing password: %w", err)
 	}
 
-	// Create user with inactive status
+	// Use a transaction for user and profile creation
+	tx := s.db.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	user := &domain.User{
 		ID:                      uuid.New(),
 		Username:                req.Username,
@@ -125,8 +132,42 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 		IsPasswordResetRequired: true,
 	}
 
-	if err := s.userRepo.CreateUser(ctx, user); err != nil {
+	if err := tx.Create(user).Error; err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("creating user: %w", err)
+	}
+
+	// Create profile based on type
+	if req.UserType == "student" {
+		if req.StudentID == "" {
+			tx.Rollback()
+			return nil, errors.New("student_id is required for student type")
+		}
+		profile := &domain.UserProfileStudent{
+			UserID:    user.ID,
+			StudentID: req.StudentID,
+		}
+		if err := tx.Create(profile).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("creating student profile: %w", err)
+		}
+	} else if req.UserType == "employee" {
+		if req.Designation == "" {
+			tx.Rollback()
+			return nil, errors.New("designation is required for employee type")
+		}
+		profile := &domain.UserProfileEmployee{
+			UserID:      user.ID,
+			Designation: req.Designation,
+		}
+		if err := tx.Create(profile).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("creating employee profile: %w", err)
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
 
 	// Generate activation token
@@ -201,7 +242,7 @@ func (s *userService) ActivateUser(ctx context.Context, token, password string) 
 	}, nil
 }
 
-func (s *userService) GetUsers(ctx context.Context, page, limit int) (*dto.GetUsersResponse, error) {
+func (s *userService) GetUsers(ctx context.Context, page, limit int, userType string) (*dto.GetUsersResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -210,12 +251,12 @@ func (s *userService) GetUsers(ctx context.Context, page, limit int) (*dto.GetUs
 	}
 	offset := (page - 1) * limit
 
-	users, err := s.userRepo.GetUsers(ctx, offset, limit)
+	users, err := s.userRepo.GetUsers(ctx, offset, limit, userType)
 	if err != nil {
 		return nil, fmt.Errorf("fetching users: %w", err)
 	}
 
-	totalCount, err := s.userRepo.CountUsers(ctx)
+	totalCount, err := s.userRepo.CountUsers(ctx, userType)
 	if err != nil {
 		return nil, fmt.Errorf("counting users: %w", err)
 	}
@@ -232,14 +273,34 @@ func (s *userService) GetUsers(ctx context.Context, page, limit int) (*dto.GetUs
 			roleID = *user.RoleID
 		}
 
+		resolvedUserType := "all"
+		studentID := ""
+		designation := ""
+
+		// Check for profiles
+		var student domain.UserProfileStudent
+		if err := s.db.WithContext(ctx).Where("user_id = ?", user.ID).First(&student).Error; err == nil {
+			resolvedUserType = "student"
+			studentID = student.StudentID
+		} else {
+			var employee domain.UserProfileEmployee
+			if err := s.db.WithContext(ctx).Where("user_id = ?", user.ID).First(&employee).Error; err == nil {
+				resolvedUserType = "employee"
+				designation = employee.Designation
+			}
+		}
+
 		userResponses = append(userResponses, dto.UserResponse{
-			ID:        user.ID,
-			Username:  user.Username,
-			Email:     user.Email,
-			RoleID:    roleID,
-			RoleName:  roleName,
-			IsActive:  user.IsActive,
-			CreatedAt: user.CreatedAt.Format(time.RFC3339),
+			ID:          user.ID,
+			Username:    user.Username,
+			Email:       user.Email,
+			RoleID:      roleID,
+			RoleName:    roleName,
+			UserType:    resolvedUserType,
+			StudentID:   studentID,
+			Designation: designation,
+			IsActive:    user.IsActive,
+			CreatedAt:   user.CreatedAt.Format(time.RFC3339),
 		})
 	}
 

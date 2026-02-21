@@ -8,6 +8,9 @@ type UserResponse struct {
 	Email       string    `json:"email"`
 	RoleID      uuid.UUID `json:"role_id"`
 	RoleName    string    `json:"role_name"`
+	UserType    string    `json:"user_type"`
+	StudentID   string    `json:"student_id,omitempty"`
+	Designation string    `json:"designation,omitempty"`
 	IsActive    bool      `json:"is_active"`
 	LastLoginAt *string   `json:"last_login_at"`
 	CreatedAt   string    `json:"created_at"`

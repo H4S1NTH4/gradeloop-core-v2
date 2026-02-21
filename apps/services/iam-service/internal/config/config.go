@@ -31,8 +31,10 @@ type DatabaseConfig struct {
 
 type JWTConfig struct {
 	SecretKey          string
-	AccessTokenExpiry  int64 // in minutes
-	RefreshTokenExpiry int64 // in days
+	AccessTokenExpiry  int64  // in minutes
+	RefreshTokenExpiry int64  // in days
+	CookieSecure       bool   // whether to set Secure flag on cookies
+	CookieSameSite     string // SameSite setting for cookies
 }
 
 func Load() (*Config, error) {
@@ -62,6 +64,8 @@ func Load() (*Config, error) {
 			SecretKey:          getEnv("JWT_SECRET_KEY", ""),
 			AccessTokenExpiry:  getEnvAsInt64("JWT_ACCESS_TOKEN_EXPIRY", 15), // 15 minutes
 			RefreshTokenExpiry: getEnvAsInt64("JWT_REFRESH_TOKEN_EXPIRY", 7), // 7 days
+			CookieSecure:       getEnvAsBool("JWT_COOKIE_SECURE", false),
+			CookieSameSite:     getEnv("JWT_COOKIE_SAMESITE", "Lax"),
 		},
 		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
 	}, nil
