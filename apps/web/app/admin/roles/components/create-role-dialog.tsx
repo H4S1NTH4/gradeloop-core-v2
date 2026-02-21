@@ -63,9 +63,10 @@ export function CreateRoleDialog({
       newErrors.name = "Role name must be at least 2 characters";
     }
 
-    if (!formData.userType) {
-      newErrors.userType = "User type is required";
-    }
+    // Temporarily disabled until backend supports user_type
+    // if (!formData.userType) {
+    //   newErrors.userType = "User type is required";
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -83,7 +84,7 @@ export function CreateRoleDialog({
     try {
       const requestData: CreateRoleRequest = {
         name: formData.name.trim(),
-        user_type: formData.userType,
+        // user_type: formData.userType, // TODO: Uncomment when backend supports user_type
         is_system_role: false,
         permission_ids:
           formData.selectedPermissions.length > 0
@@ -177,8 +178,8 @@ export function CreateRoleDialog({
               )}
             </div>
 
-            {/* User Type */}
-            <div className="space-y-2">
+            {/* User Type - Temporarily disabled until backend supports it */}
+            {/* <div className="space-y-2">
               <Label htmlFor="userType">
                 User Type <span className="text-red-500">*</span>
               </Label>
@@ -206,7 +207,7 @@ export function CreateRoleDialog({
               <p className="text-sm text-muted-foreground">
                 This role will only be assignable to users of this type
               </p>
-            </div>
+            </div> */}
 
             {/* Permissions */}
             <div className="space-y-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -117,38 +117,37 @@ export function PermissionsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              Object.entries(groupedPermissions).flatMap(
-                ([category, categoryPermissions]) => [
-                  /* Category Header Row */
-                  <TableRow
-                    key={`category-${category}`}
-                    className="bg-muted/50"
-                  >
-                    <TableCell colSpan={3} className="font-semibold">
-                      <div className="flex items-center gap-2">
-                        <Key className="h-4 w-4 text-muted-foreground" />
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                        <Badge variant="outline" className="ml-2">
-                          {categoryPermissions.length}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                  </TableRow>,
-                  /* Permission Rows */
-                  ...categoryPermissions.map((permission) => (
-                    <TableRow key={permission.id}>
-                      <TableCell className="font-medium font-mono text-sm pl-8">
-                        {permission.name}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {permission.description || "No description"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{category}</Badge>
+              Object.entries(groupedPermissions).map(
+                ([category, categoryPermissions]) => (
+                  <React.Fragment key={category}>
+                    {/* Category Header Row */}
+                    <TableRow className="bg-muted/50">
+                      <TableCell colSpan={3} className="font-semibold">
+                        <div className="flex items-center gap-2">
+                          <Key className="h-4 w-4 text-muted-foreground" />
+                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                          <Badge variant="outline" className="ml-2">
+                            {categoryPermissions.length}
+                          </Badge>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  )),
-                ],
+                    {/* Permission Rows */}
+                    {categoryPermissions.map((permission) => (
+                      <TableRow key={permission.id}>
+                        <TableCell className="font-medium font-mono text-sm pl-8">
+                          {permission.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {permission.description || "No description"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{category}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </React.Fragment>
+                ),
               )
             )}
           </TableBody>
