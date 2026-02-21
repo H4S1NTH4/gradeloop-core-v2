@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Terminal } from "lucide-react";
 
 export default function AuthLayout({
     children,
@@ -7,110 +6,88 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex min-h-screen flex-col lg:flex-row">
-            {/* ── Left branding panel (hidden on mobile) ── */}
-            <div className="relative hidden lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-primary p-12">
-                {/* Subtle dot pattern */}
-                <div
-                    className="absolute inset-0 opacity-[0.07] pointer-events-none"
-                    style={{
-                        backgroundImage:
-                            "radial-gradient(circle at 2px 2px, white 1.5px, transparent 0)",
-                        backgroundSize: "28px 28px",
-                    }}
-                />
-
-                {/* Decorative code glyphs */}
-                <span className="absolute bottom-24 right-10 select-none font-mono text-8xl font-black text-white/[0.06]">
-                    {"{ }"}
-                </span>
-                <span className="absolute top-20 left-8 select-none font-mono text-8xl font-black text-white/[0.06]">
-                    {"</>"}
-                </span>
-
-                {/* Logo */}
-                <div className="relative z-10 flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 shadow-lg backdrop-blur-sm">
-                        <Terminal className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-2xl font-extrabold tracking-tight text-white">
-                        Gradeloop
-                    </span>
-                </div>
-
-                {/* Tagline */}
+        <div className="flex w-full min-h-screen overflow-hidden bg-white dark:bg-background-dark font-sans">
+            {/* Left Sidebar: Branding Area */}
+            <div className="hidden lg:flex lg:w-[45%] bg-brand-mesh relative flex-col justify-between p-16 text-white overflow-hidden">
                 <div className="relative z-10">
-                    <h2 className="mb-5 text-5xl font-extrabold leading-tight tracking-tight text-white">
-                        Mastering code,{" "}
-                        <span className="text-blue-200">simplified.</span>
-                    </h2>
-                    <p className="max-w-sm text-lg leading-relaxed text-blue-100/80">
-                        The professional autograder and LMS for modern computer
-                        science education. Trusted by leading universities
-                        worldwide.
-                    </p>
+                    <div className="flex items-center gap-3 mb-20">
+                        <div className="size-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
+                            <svg className="text-white size-7" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M24 4C25.7818 14.2173 33.7827 22.2182 44 24C33.7827 25.7818 25.7818 33.7827 24 44C22.2182 33.7827 14.2173 25.7818 4 24C14.2173 22.2182 22.2182 14.2173 24 4Z" fill="currentColor"></path>
+                            </svg>
+                        </div>
+                        <span className="text-2xl font-bold tracking-tight text-white">Gradeloop</span>
+                    </div>
+                    <div className="space-y-6 max-w-lg">
+                        <h1 className="text-6xl font-extrabold leading-[1.1] tracking-tight text-white">Master the Art of Code.</h1>
+                        <p className="text-xl text-white/70 leading-relaxed font-medium">
+                            The all-in-one platform for automated grading, instant feedback, and seamless coding education.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Feature cards */}
-                <div className="relative z-10 grid grid-cols-2 gap-4">
-                    <div className="rounded-xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm">
-                        <div className="mb-2 text-blue-200 text-2xl">⚡</div>
-                        <h3 className="mb-1 font-bold text-white">
-                            Instant Feedback
-                        </h3>
-                        <p className="text-sm text-blue-100/75">
-                            Real-time autograding for student assignments.
-                        </p>
+                <div className="relative z-10 mt-16 bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 shadow-2xl ring-1 ring-white/10">
+                    <div className="flex gap-2 mb-6">
+                        <div className="size-3 rounded-full bg-red-400/80"></div>
+                        <div className="size-3 rounded-full bg-yellow-400/80"></div>
+                        <div className="size-3 rounded-full bg-green-400/80"></div>
                     </div>
-                    <div className="rounded-xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm">
-                        <div className="mb-2 text-blue-200 text-2xl">🔗</div>
-                        <h3 className="mb-1 font-bold text-white">
-                            LMS Integration
-                        </h3>
-                        <p className="text-sm text-blue-100/75">
-                            Syncs seamlessly with Canvas, Moodle, and more.
-                        </p>
+                    <div className="font-mono text-base space-y-3">
+                        <p><span className="text-blue-300">def</span> <span className="text-yellow-300">grade_submission</span>(student_id):</p>
+                        <p className="pl-6 text-white/90">results = runner.<span className="text-blue-300">execute</span>(student_id)</p>
+                        <p className="pl-6"><span className="text-blue-300">if</span> results.passed:</p>
+                        <p className="pl-12 text-emerald-400 font-semibold">return "Excellent Work! 🚀"</p>
+                        <p className="pl-6 text-white/40 italic">// Automated feedback delivered</p>
                     </div>
+                </div>
+
+                <div className="relative z-10 flex items-center gap-6 text-sm font-medium text-white/40 mt-auto">
+                    <span className="whitespace-nowrap">Trusted by 500+ Universities</span>
+                    <div className="h-px w-full bg-white/10"></div>
                 </div>
             </div>
 
-            {/* ── Right form panel ── */}
-            <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12 sm:px-10 lg:w-1/2 lg:px-20">
-                {/* Mobile logo */}
-                <div className="mb-10 flex w-full max-w-md items-center gap-3 lg:hidden">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-lg">
-                        <Terminal className="h-5 w-5 text-primary-foreground" />
+            {/* Right Side: Form Area */}
+            <div className="w-full lg:w-[55%] bg-white dark:bg-background-dark flex flex-col items-center justify-center px-6 py-12">
+                <div className="w-full max-w-md space-y-8">
+                    {/* Mobile Header */}
+                    <div className="lg:hidden flex justify-center mb-10">
+                        <div className="flex items-center gap-3 text-brand-deep dark:text-white">
+                            <div className="size-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                                <svg className="text-white size-7" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M24 4C25.7818 14.2173 33.7827 22.2182 44 24C33.7827 25.7818 25.7818 33.7827 24 44C22.2182 33.7827 14.2173 25.7818 4 24C14.2173 22.2182 22.2182 14.2173 24 4Z" fill="currentColor"></path>
+                                </svg>
+                            </div>
+                            <span className="text-2xl font-bold tracking-tight">Gradeloop</span>
+                        </div>
                     </div>
-                    <span className="text-xl font-extrabold tracking-tight">
-                        Gradeloop
-                    </span>
-                </div>
 
-                {/* Page content */}
-                <div className="w-full max-w-md">{children}</div>
+                    {children}
 
-                {/* Footer links */}
-                <div className="mt-10 flex gap-6">
-                    <Link
-                        href="/privacy"
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        Privacy Policy
-                    </Link>
-                    <Link
-                        href="/terms"
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        Terms of Service
-                    </Link>
-                    <Link
-                        href="/support"
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        Contact Support
-                    </Link>
+                    {/* Footer links */}
+                    <div className="pt-8 flex items-center justify-center gap-6">
+                        <Link
+                            href="/privacy"
+                            className="text-xs font-semibold text-slate-400 hover:text-primary transition-colors"
+                        >
+                            Privacy Policy
+                        </Link>
+                        <Link
+                            href="/terms"
+                            className="text-xs font-semibold text-slate-400 hover:text-primary transition-colors"
+                        >
+                            Terms
+                        </Link>
+                        <Link
+                            href="/support"
+                            className="text-xs font-semibold text-slate-400 hover:text-primary transition-colors"
+                        >
+                            Support
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>
     );
 }
+

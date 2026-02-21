@@ -79,50 +79,52 @@ export default function ForgotPasswordPage() {
   // ── Success state ──────────────────────────────────────────────────────────
   if (status === "success") {
     return (
-      <div className="space-y-6 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
-          <Mail className="h-7 w-7 text-emerald-500" />
+      <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 shadow-sm border border-emerald-100 dark:border-emerald-500/20">
+          <Mail className="h-10 w-10 text-emerald-500" />
         </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">
+        <div className="space-y-3">
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Check your inbox
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          </h2>
+          <p className="text-lg text-slate-500 dark:text-slate-400">
             If an account exists for{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-bold text-slate-900 dark:text-white">
               {form.getValues("email")}
             </span>
             , you will receive a password reset link shortly.
           </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Redirecting you back to login…
-        </p>
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
-        >
-          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back to Login
-        </Link>
+        <div className="space-y-4 pt-4">
+          <p className="text-sm font-medium text-slate-400 animate-pulse">
+            Redirecting you back to login…
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline transition-colors group"
+          >
+            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+            Back to Login
+          </Link>
+        </div>
       </div>
     );
   }
 
   // ── Form state ─────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Icon + heading */}
-      <div className="space-y-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 dark:bg-primary/20">
-          <KeyRound className="h-7 w-7 text-primary" />
+      <div className="space-y-6 text-center lg:text-left">
+        <div className="inline-flex lg:flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 dark:bg-primary/20 shadow-sm ring-1 ring-primary/20">
+          <KeyRound className="h-8 w-8 text-primary" />
         </div>
 
-        <div className="space-y-1.5">
-          <h1 className="text-3xl font-bold tracking-tight">
+        <div className="space-y-3">
+          <h2 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Forgot Password?
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          </h2>
+          <p className="text-lg text-slate-500 dark:text-slate-400">
             No worries! Enter your email address and we&apos;ll send you a link
             to reset your password.
           </p>
@@ -131,29 +133,31 @@ export default function ForgotPasswordPage() {
 
       {/* Error banner */}
       {status === "error" && errorMessage && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm font-medium text-destructive animate-in zoom-in-95 duration-300">
           {errorMessage}
         </div>
       )}
 
       {/* Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-semibold">
+              <FormItem className="space-y-2">
+                <FormLabel className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Email Address
                 </FormLabel>
                 <FormControl>
                   <div className="relative group">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                      <Mail className="size-5" />
+                    </div>
                     <Input
                       type="email"
                       placeholder="name@university.edu"
-                      className="pl-10 h-11"
+                      className="w-full pl-12 pr-4 py-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl focus-visible:ring-4 focus-visible:ring-primary/10 transition-all text-slate-900 dark:text-white placeholder:text-slate-400 font-medium h-auto"
                       autoComplete="email"
                       {...field}
                     />
@@ -167,7 +171,7 @@ export default function ForgotPasswordPage() {
           <Button
             type="submit"
             size="lg"
-            className="w-full font-bold shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform group"
+            className="w-full py-7 bg-primary hover:bg-primary/95 text-white font-bold rounded-2xl shadow-xl shadow-primary/25 transition-all flex items-center justify-center gap-2 text-lg active:scale-[0.98] h-auto group"
             disabled={status === "submitting"}
           >
             {status === "submitting" ? (
@@ -175,7 +179,7 @@ export default function ForgotPasswordPage() {
             ) : (
               <>
                 Send Reset Link
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
               </>
             )}
           </Button>
@@ -183,10 +187,10 @@ export default function ForgotPasswordPage() {
       </Form>
 
       {/* Back to login */}
-      <div className="border-t pt-6">
+      <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-center lg:justify-start">
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
+          className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline transition-colors group"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
           Back to Login
@@ -195,3 +199,4 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
+

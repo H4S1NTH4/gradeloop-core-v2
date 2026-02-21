@@ -6,7 +6,7 @@ import * as z from "zod";
 import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldCheck, Lock, ArrowRight } from "lucide-react";
 
 import {
   Form,
@@ -88,14 +88,13 @@ function ResetPasswordForm() {
     }
 
     try {
-      // Backend expects: POST /auth/reset-password { token, new_password }
       await apiClient.post("/auth/reset-password", {
         token,
         new_password: values.password,
       });
 
       setSuccess(true);
-      setTimeout(() => router.push("/login"), 2000);
+      setTimeout(() => router.push("/login"), 3000);
     } catch (err: unknown) {
       const status = (
         err as { response?: { status?: number; data?: { message?: string } } }
@@ -125,26 +124,31 @@ function ResetPasswordForm() {
 
   if (success) {
     return (
-      <div className="space-y-6 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
-          <ShieldCheck className="h-7 w-7 text-emerald-500" />
+      <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 shadow-sm border border-emerald-100 dark:border-emerald-500/20">
+          <ShieldCheck className="h-10 w-10 text-emerald-500" />
         </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">
+        <div className="space-y-3">
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Password updated!
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          </h2>
+          <p className="text-lg text-slate-500 dark:text-slate-400">
             Your password has been reset successfully. Redirecting you to
             login&hellip;
           </p>
         </div>
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
-        >
-          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back to Login
-        </Link>
+        <div className="space-y-4 pt-4">
+          <p className="text-sm font-medium text-slate-400 animate-pulse">
+            Please wait...
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline transition-colors group"
+          >
+            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+            Back to Login
+          </Link>
+        </div>
       </div>
     );
   }
@@ -152,42 +156,45 @@ function ResetPasswordForm() {
   // ── Form state ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Heading */}
-      <div className="space-y-1.5">
-        <h1 className="text-3xl font-bold tracking-tight">
+      <div className="text-center lg:text-left">
+        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           Reset Your Password
-        </h1>
-        <p className="text-sm text-muted-foreground">
+        </h2>
+        <p className="mt-3 text-slate-500 dark:text-slate-400 text-lg">
           Choose a new secure password. This link expires after one hour.
         </p>
       </div>
 
       {/* Error banner */}
       {errorMessage && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm font-medium text-destructive animate-in zoom-in-95 duration-300">
           {errorMessage}
         </div>
       )}
 
       {/* Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* New password */}
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-semibold">
+              <FormItem className="space-y-2">
+                <FormLabel className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                   New Password
                 </FormLabel>
-                <div className="relative">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                    <Lock className="size-5" />
+                  </div>
                   <FormControl>
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Create a new password"
-                      className="pr-11 h-11"
+                      className="w-full pl-12 pr-12 py-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl focus-visible:ring-4 focus-visible:ring-primary/10 transition-all text-slate-900 dark:text-white placeholder:text-slate-400 font-medium h-auto"
                       autoComplete="new-password"
                       {...field}
                     />
@@ -195,15 +202,13 @@ function ResetPasswordForm() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="size-5" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-5" />
                     )}
                   </button>
                 </div>
@@ -217,16 +222,19 @@ function ResetPasswordForm() {
             control={form.control}
             name="confirmPassword"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-semibold">
+              <FormItem className="space-y-2">
+                <FormLabel className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Confirm New Password
                 </FormLabel>
-                <div className="relative">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                    <Lock className="size-5" />
+                  </div>
                   <FormControl>
                     <Input
                       type={showConfirm ? "text" : "password"}
                       placeholder="Re-enter your password"
-                      className="pr-11 h-11"
+                      className="w-full pl-12 pr-12 py-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl focus-visible:ring-4 focus-visible:ring-primary/10 transition-all text-slate-900 dark:text-white placeholder:text-slate-400 font-medium h-auto"
                       autoComplete="new-password"
                       {...field}
                     />
@@ -234,13 +242,13 @@ function ResetPasswordForm() {
                   <button
                     type="button"
                     onClick={() => setShowConfirm((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                     aria-label={showConfirm ? "Hide password" : "Show password"}
                   >
                     {showConfirm ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="size-5" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-5" />
                     )}
                   </button>
                 </div>
@@ -250,24 +258,31 @@ function ResetPasswordForm() {
           />
 
           {/* Live strength checklist */}
-          <PasswordIndicator password={watchedPassword} />
+          <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <PasswordIndicator password={watchedPassword} />
+          </div>
 
           <Button
             type="submit"
             size="lg"
-            className="w-full font-bold shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform"
+            className="w-full py-7 bg-primary hover:bg-primary/95 text-white font-bold rounded-2xl shadow-xl shadow-primary/25 transition-all flex items-center justify-center gap-2 text-lg active:scale-[0.98] h-auto group"
             disabled={form.formState.isSubmitting || !token}
           >
-            {form.formState.isSubmitting ? "Updating…" : "Update Password"}
+            {form.formState.isSubmitting ? "Updating…" : (
+              <>
+                Update Password
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
+              </>
+            )}
           </Button>
         </form>
       </Form>
 
       {/* Back link */}
-      <div className="border-t pt-6">
+      <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-center lg:justify-start">
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group"
+          className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline transition-colors group"
         >
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
           Back to Login
@@ -283,12 +298,17 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="space-y-4 animate-pulse">
-          <div className="h-8 w-48 rounded-md bg-muted" />
-          <div className="h-4 w-64 rounded-md bg-muted" />
-          <div className="h-11 w-full rounded-md bg-muted" />
-          <div className="h-11 w-full rounded-md bg-muted" />
-          <div className="h-11 w-full rounded-md bg-muted" />
+        <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="space-y-3">
+            <div className="h-10 w-64 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            <div className="h-6 w-80 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+          </div>
+          <div className="space-y-6">
+            <div className="h-20 w-full rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            <div className="h-20 w-full rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            <div className="h-24 w-full rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            <div className="h-16 w-full rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+          </div>
         </div>
       }
     >
@@ -296,3 +316,4 @@ export default function ResetPasswordPage() {
     </Suspense>
   );
 }
+
