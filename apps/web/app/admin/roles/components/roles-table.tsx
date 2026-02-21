@@ -89,7 +89,7 @@ export function RolesTable({
           <TableHeader>
             <TableRow>
               <TableHead>Role Name</TableHead>
-              {/* <TableHead>User Type</TableHead> */}
+              <TableHead>User Type</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Permissions</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -98,7 +98,7 @@ export function RolesTable({
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   <div className="flex items-center justify-center">
                     <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
@@ -106,7 +106,7 @@ export function RolesTable({
               </TableRow>
             ) : filteredRoles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-muted-foreground">No roles found</p>
                     {searchQuery && (
@@ -130,8 +130,7 @@ export function RolesTable({
                       {role.name}
                     </div>
                   </TableCell>
-                  {/* User Type column - hidden until backend supports it */}
-                  {/* <TableCell>
+                  <TableCell>
                     <Badge
                       variant={
                         role.user_type === "all"
@@ -147,7 +146,7 @@ export function RolesTable({
                           ? "Students"
                           : "Employees"}
                     </Badge>
-                  </TableCell> */}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={

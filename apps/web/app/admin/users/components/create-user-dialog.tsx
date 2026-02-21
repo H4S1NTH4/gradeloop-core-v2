@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { useToast } from "@/hooks/use-toast";
 import { createUser } from "@/lib/api/iam";
 import { CreateUserRequest, Role } from "@/lib/types/iam";
@@ -44,16 +44,25 @@ export function CreateUserDialog({
   const [activationLink, setActivationLink] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const [formData, setFormData] = useState<CreateUserRequest>({
+  const [formData, setFormData] = useState<{
+    username: string;
+    email: string;
+    role_id: string;
+    student_id: string;
+    designation: string;
+  }>({
     username: "",
     email: "",
     role_id: "",
-    user_type: "student",
     student_id: "",
     designation: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Get the selected role's user_type
+  const selectedRole = roles.find((role) => role.id === formData.role_id);
+  const userType = selectedRole?.user_type || "all";
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -74,16 +83,13 @@ export function CreateUserDialog({
       newErrors.role_id = "Role is required";
     }
 
-    if (!formData.user_type) {
-      newErrors.user_type = "User type is required";
+    // Validate based on role's user_type
+    if (userType === "student" && !formData.student_id?.trim()) {
+      newErrors.student_id = "Student ID is required for student roles";
     }
 
-    if (formData.user_type === "student" && !formData.student_id?.trim()) {
-      newErrors.student_id = "Student ID is required for students";
-    }
-
-    if (formData.user_type === "employee" && !formData.designation?.trim()) {
-      newErrors.designation = "Designation is required for employees";
+    if (userType === "employee" && !formData.designation?.trim()) {
+      newErrors.designation = "Designation is required for employee roles";
     }
 
     setErrors(newErrors);
@@ -100,19 +106,30 @@ export function CreateUserDialog({
     setIsLoading(true);
 
     try {
-      // Prepare request data - remove empty optional fields
+      // Determine user_type from role
+      let derivedUserType: "student" | "employee";
+      if (userType === "student") {
+        derivedUserType = "student";
+      } else if (userType === "employee") {
+        derivedUserType = "employee";
+      } else {
+        // For "all" type roles, default to employee
+        derivedUserType = "employee";
+      }
+
+      // Prepare request data
       const requestData: CreateUserRequest = {
         username: formData.username.trim(),
         email: formData.email.trim(),
         role_id: formData.role_id,
-        user_type: formData.user_type,
+        user_type: derivedUserType,
       };
 
-      if (formData.user_type === "student" && formData.student_id) {
+      if (derivedUserType === "student" && formData.student_id) {
         requestData.student_id = formData.student_id.trim();
       }
 
-      if (formData.user_type === "employee" && formData.designation) {
+      if (derivedUserType === "employee" && formData.designation) {
         requestData.designation = formData.designation.trim();
       }
 
@@ -158,7 +175,6 @@ export function CreateUserDialog({
       username: "",
       email: "",
       role_id: "",
-      user_type: "student",
       student_id: "",
       designation: "",
     });
@@ -168,8 +184,8 @@ export function CreateUserDialog({
     onOpenChange(false);
   };
 
-  // Available roles (filter out system roles if needed)
-  const availableRoles = roles.filter((role) => !role.is_system_role);
+  // Available roles
+  const availableRoles = roles;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -271,7 +287,13 @@ export function CreateUserDialog({
                 <Select
                   value={formData.role_id}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, role_id: value })
+                    setFormData({
+                      ...formData,
+                      role_id: value,
+                      // Clear conditional fields when role changes
+                      student_id: "",
+                      designation: "",
+                    })
                   }
                 >
                   <SelectTrigger
@@ -283,6 +305,17 @@ export function CreateUserDialog({
                     {availableRoles.map((role) => (
                       <SelectItem key={role.id} value={role.id}>
                         {role.name}
+                        {role.user_type && (
+                          <span className="text-muted-foreground text-xs ml-2">
+                            (
+                            {role.user_type === "all"
+                              ? "All Users"
+                              : role.user_type === "student"
+                                ? "Student"
+                                : "Employee"}
+                            )
+                          </span>
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -290,50 +323,22 @@ export function CreateUserDialog({
                 {errors.role_id && (
                   <p className="text-sm text-red-500">{errors.role_id}</p>
                 )}
-              </div>
-
-              {/* User Type */}
-              <div className="space-y-2">
-                <Label>
-                  User Type <span className="text-red-500">*</span>
-                </Label>
-                <RadioGroup
-                  value={formData.user_type}
-                  onValueChange={(value: "student" | "employee") =>
-                    setFormData({
-                      ...formData,
-                      user_type: value,
-                      student_id: "",
-                      designation: "",
-                    })
-                  }
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="student" id="student" />
-                    <Label
-                      htmlFor="student"
-                      className="font-normal cursor-pointer"
-                    >
-                      Student
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="employee" id="employee" />
-                    <Label
-                      htmlFor="employee"
-                      className="font-normal cursor-pointer"
-                    >
-                      Employee
-                    </Label>
-                  </div>
-                </RadioGroup>
-                {errors.user_type && (
-                  <p className="text-sm text-red-500">{errors.user_type}</p>
+                {selectedRole && selectedRole.user_type && (
+                  <p className="text-sm text-muted-foreground">
+                    This role is for{" "}
+                    <span className="font-medium">
+                      {selectedRole.user_type === "all"
+                        ? "all user types"
+                        : selectedRole.user_type === "student"
+                          ? "students"
+                          : "employees"}
+                    </span>
+                  </p>
                 )}
               </div>
 
-              {/* Student ID - Conditional */}
-              {formData.user_type === "student" && (
+              {/* Student ID - Conditional based on role's user_type */}
+              {(userType === "student" || userType === "all") && (
                 <div className="space-y-2">
                   <Label htmlFor="student_id">
                     Student ID <span className="text-red-500">*</span>
@@ -353,8 +358,8 @@ export function CreateUserDialog({
                 </div>
               )}
 
-              {/* Designation - Conditional */}
-              {formData.user_type === "employee" && (
+              {/* Designation - Conditional based on role's user_type */}
+              {(userType === "employee" || userType === "all") && (
                 <div className="space-y-2">
                   <Label htmlFor="designation">
                     Designation <span className="text-red-500">*</span>

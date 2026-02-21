@@ -93,7 +93,7 @@ export function EditRoleDialog({
     try {
       const requestData: UpdateRoleRequest = {
         name: formData.name.trim(),
-        // user_type: formData.userType, // TODO: Uncomment when backend supports user_type
+        user_type: formData.userType,
         permission_ids: formData.selectedPermissions,
       };
 
@@ -191,8 +191,8 @@ export function EditRoleDialog({
               )}
             </div>
 
-            {/* User Type - Temporarily disabled until backend supports it */}
-            {/* <div className="space-y-2">
+            {/* User Type */}
+            <div className="space-y-2">
               <Label htmlFor="userType">
                 User Type <span className="text-red-500">*</span>
               </Label>
@@ -218,10 +218,10 @@ export function EditRoleDialog({
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  This role will only be assignable to users of this type
+                  Users with this role will be categorized by this type
                 </p>
               )}
-            </div> */}
+            </div>
 
             {/* Permissions */}
             <div className="space-y-2">
