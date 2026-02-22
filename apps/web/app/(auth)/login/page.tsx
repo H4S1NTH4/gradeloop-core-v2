@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,21 @@ import { useAuthStore } from "@/lib/stores/authStore";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setAuth } = useAuthStore();
+  const setSession = useAuthStore((s) => s.setSession);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const getRedirectPath = useAuthStore((s) => s.getRedirectPath);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // If the user already has a valid session, redirect them away from login
+  useEffect(() => {
+    if (isHydrated && isAuthenticated) {
+      router.replace(getRedirectPath());
+    }
+  }, [isHydrated, isAuthenticated, getRedirectPath, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,23 +43,24 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
+    const username = formData.get("username") as string;
     const password = formData.get("password") as string;
 
     try {
       const response = await authApi.login({
-        username: email, // Backend expects username field
+        username,
         password,
       });
 
-      // Store auth data in zustand store
-      setAuth(response.access_token, response.user);
+      // Decode JWT claims and populate the store.
+      // The refresh token is set as an HttpOnly cookie by the server automatically.
+      setSession(response.access_token);
 
-      // Redirect to dashboard or home page
-      router.push("/dashboard");
+      // Read the redirect path after setSession so role is already resolved
+      const path = useAuthStore.getState().getRedirectPath();
+      router.push(path);
     } catch (err) {
-      const errorMessage = handleApiError(err);
-      setError(errorMessage);
+      setError(handleApiError(err));
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +72,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Login to your account</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account
+            Enter your username or email below to login to your account
           </CardDescription>
           {/*<CardAction>
             <Link href="/signup">
@@ -82,15 +94,15 @@ export default function LoginPage() {
               )}
 
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="username">Username or Email</Label>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="m@example.com"
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="superadmin@gradeloop.com"
                   required
                   disabled={isLoading}
-                  autoComplete="email"
+                  autoComplete="username"
                 />
               </div>
 
@@ -134,7 +146,7 @@ export default function LoginPage() {
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? "Logging in…" : "Login"}
           </Button>
           <Button variant="outline" className="w-full" disabled={isLoading}>
             Login with Google
