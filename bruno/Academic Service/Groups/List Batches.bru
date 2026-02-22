@@ -14,6 +14,23 @@ auth:bearer {
   token: {{ACCESS_TOKEN}}
 }
 
+script:post-response {
+  if (res.status === 200) {
+    const batches = res.body.batches;
+    if (batches && batches.length > 0) {
+      const first = batches[0];
+      bru.setEnvVar("BATCH_ID", first.id);
+      console.log("✅ BATCH_ID saved (first result):", first.id);
+      if (first.degree_id) {
+        bru.setEnvVar("DEGREE_ID", first.degree_id);
+        console.log("✅ DEGREE_ID saved:", first.degree_id);
+      }
+    } else {
+      console.warn("⚠️  No batches returned — BATCH_ID not updated.");
+    }
+  }
+}
+
 settings {
   encodeUrl: true
   timeout: 0

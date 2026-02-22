@@ -24,6 +24,21 @@ body:json {
   }
 }
 
+script:post-response {
+  if (res.status === 201) {
+    const id = res.body.id;
+    if (id) {
+      bru.setEnvVar("BATCH_ID", id);
+      console.log("✅ BATCH_ID saved:", id);
+    }
+    const degreeId = res.body.degree_id;
+    if (degreeId) {
+      bru.setEnvVar("DEGREE_ID", degreeId);
+      console.log("✅ DEGREE_ID saved:", degreeId);
+    }
+  }
+}
+
 settings {
   encodeUrl: true
   timeout: 0

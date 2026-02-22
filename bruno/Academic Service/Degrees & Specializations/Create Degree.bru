@@ -23,6 +23,16 @@ body:json {
   }
 }
 
+script:post-response {
+  if (res.status === 201) {
+    const id = res.body.id;
+    if (id) {
+      bru.setEnvVar("DEGREE_ID", id);
+      console.log("✅ DEGREE_ID saved:", id);
+    }
+  }
+}
+
 settings {
   encodeUrl: true
   timeout: 0
@@ -30,23 +40,23 @@ settings {
 
 docs {
   # Create Degree
-  
+
   Creates a new degree under a department.
-  
+
   ## Endpoint
   POST /api/v1/degrees
-  
+
   ## Prerequisites
   - Valid access token (run Login request first)
   - Role: super_admin OR faculty_admin (department_admins manage degrees in normal operations; router currently allows super_admin or faculty_admin)
   - Parent `department` must exist and be active (not soft-deleted and `is_active = true`)
-  
+
   ## Request Body
   - `department_id` (uuid) - The parent department id (required)
   - `name` (string) - Degree name (required, 3-255 chars)
   - `code` (string) - Degree code (required, 2-50 chars). Must be unique within the department.
   - `level` (string) - One of: Undergraduate, Postgraduate, Doctoral, Diploma, Certificate
-  
+
   Example:
   {
     "department_id": "d261ab7b-7224-4357-8a18-aebc459881e6",
@@ -54,14 +64,14 @@ docs {
     "code": "BSCIT",
     "level": "Undergraduate"
   }
-  
+
   ## Business Rules
   - department_id cannot be changed later via update.
   - Department referenced by `department_id` must exist and be active.
   - Unique constraint: (department_id, code) — duplicate codes within a department are rejected.
   - On creation the degree is active (`is_active = true`) and timestamps are set.
   - Audit log will be written with action `DEGREE_CREATED`.
-  
+
   ## Responses
   - 201 Created
     - Returns the created degree:

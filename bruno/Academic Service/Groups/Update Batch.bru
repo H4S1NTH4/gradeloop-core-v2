@@ -24,6 +24,26 @@ body:json {
   }
 }
 
+script:post-response {
+  if (res.status === 200) {
+    const id = res.body.id;
+    if (id) {
+      bru.setEnvVar("BATCH_ID", id);
+      console.log("✅ BATCH_ID confirmed:", id);
+    }
+    const degreeId = res.body.degree_id;
+    if (degreeId) {
+      bru.setEnvVar("DEGREE_ID", degreeId);
+      console.log("✅ DEGREE_ID confirmed:", degreeId);
+    }
+    const parentId = res.body.parent_id;
+    if (parentId) {
+      bru.setEnvVar("PARENT_BATCH_ID", parentId);
+      console.log("✅ PARENT_BATCH_ID confirmed:", parentId);
+    }
+  }
+}
+
 settings {
   encodeUrl: true
   timeout: 0
