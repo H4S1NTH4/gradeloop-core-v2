@@ -19,7 +19,8 @@ body:json {
     "course_id": "{{COURSE_ID}}",
     "semester_id": "{{SEMESTER_ID}}",
     "batch_id": "{{BATCH_ID}}",
-    "status": "Planned"
+    "status": "Planned",
+    "max_enrollment": 30
   }
 }
 
@@ -82,11 +83,13 @@ docs {
     Set it manually in the environment or replace inline.
 
   ## Request Body
-  - `course_id`    (uuid, required) — logical ref to Course Catalog service
-  - `semester_id`  (uuid, required) — logical ref to Academic Calendar service
-  - `batch_id`     (uuid, required) — must be an active, non-deleted batch
-  - `status`       (string, optional, default: "Planned")
+  - `course_id`      (uuid, required)   — logical ref to Course Catalog service
+  - `semester_id`    (uuid, required)   — logical ref to Academic Calendar service
+  - `batch_id`       (uuid, required)   — must be an active, non-deleted batch
+  - `status`         (string, optional, default: "Planned")
     Allowed values: Planned | Active | Completed | Cancelled
+  - `max_enrollment` (int, optional, default: 0) — maximum number of students
+    allowed to enroll; must be a non-negative integer (0 = unlimited)
 
   ## Business Rules
   - The referenced batch must exist (not soft-deleted) and be active (is_active = true).
@@ -98,13 +101,14 @@ docs {
 
   ## Response (201 Created)
   {
-    "id":           "uuid",
-    "course_id":    "uuid",
-    "semester_id":  "uuid",
-    "batch_id":     "uuid",
-    "status":       "Planned",
-    "created_at":   "2025-01-01T00:00:00Z",
-    "updated_at":   "2025-01-01T00:00:00Z"
+    "id":             "uuid",
+    "course_id":      "uuid",
+    "semester_id":    "uuid",
+    "batch_id":       "uuid",
+    "status":         "Planned",
+    "max_enrollment": 30,
+    "created_at":     "2025-01-01T00:00:00Z",
+    "updated_at":     "2025-01-01T00:00:00Z"
   }
 
   ## Variable Automation

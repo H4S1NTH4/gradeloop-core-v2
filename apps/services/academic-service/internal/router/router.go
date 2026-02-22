@@ -20,6 +20,8 @@ type Config struct {
 	CourseInstanceHandler   *handler.CourseInstanceHandler
 	CourseInstructorHandler *handler.CourseInstructorHandler
 	EnrollmentHandler       *handler.EnrollmentHandler
+	CourseHandler           *handler.CourseHandler
+	SemesterHandler         *handler.SemesterHandler
 	JWTSecretKey            []byte
 }
 
@@ -146,6 +148,30 @@ func SetupRoutes(app *fiber.App, cfg Config) {
 	enrollments := protected.Group("/enrollments", requireAdminRole())
 	enrollments.Post("/", cfg.EnrollmentHandler.EnrollStudent)
 	enrollments.Put("/:instanceID/:userID", cfg.EnrollmentHandler.UpdateEnrollment)
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Course routes
+	// NOTE: /courses/:id/prerequisites must be registered after /courses/:id
+	// ─────────────────────────────────────────────────────────────────────────
+	courses := protected.Group("/courses", requireAdminRole())
+	courses.Post("/", cfg.CourseHandler.CreateCourse)
+	courses.Get("/", cfg.CourseHandler.ListCourses)
+	courses.Get("/:id", cfg.CourseHandler.GetCourse)
+	courses.Put("/:id", cfg.CourseHandler.UpdateCourse)
+	courses.Patch("/:id/deactivate", cfg.CourseHandler.DeactivateCourse)
+	courses.Post("/:id/prerequisites", cfg.CourseHandler.AddPrerequisite)
+	courses.Get("/:id/prerequisites", cfg.CourseHandler.ListPrerequisites)
+	courses.Delete("/:id/prerequisites/:prereqID", cfg.CourseHandler.RemovePrerequisite)
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Semester routes
+	// ─────────────────────────────────────────────────────────────────────────
+	semesters := protected.Group("/semesters", requireAdminRole())
+	semesters.Post("/", cfg.SemesterHandler.CreateSemester)
+	semesters.Get("/", cfg.SemesterHandler.ListSemesters)
+	semesters.Get("/:id", cfg.SemesterHandler.GetSemester)
+	semesters.Put("/:id", cfg.SemesterHandler.UpdateSemester)
+	semesters.Patch("/:id/deactivate", cfg.SemesterHandler.DeactivateSemester)
 
 	app.Get("/", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{

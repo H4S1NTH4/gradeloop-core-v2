@@ -92,6 +92,14 @@ func run() error {
 	// Initialize services for batches
 	batchService := service.NewBatchService(db.DB, batchRepo, degreeRepo, specializationRepo, auditClient, logger)
 
+	// Initialize repositories for course catalog & academic calendar
+	courseRepo := repository.NewCourseRepository(db.DB)
+	semesterRepo := repository.NewSemesterRepository(db.DB)
+
+	// Initialize services for course catalog & academic calendar
+	courseService := service.NewCourseService(courseRepo, auditClient, logger)
+	semesterService := service.NewSemesterService(semesterRepo, auditClient, logger)
+
 	// Initialize repositories for enrollment management
 	batchMemberRepo := repository.NewBatchMemberRepository(db.DB)
 	courseInstanceRepo := repository.NewCourseInstanceRepository(db.DB)
@@ -118,6 +126,10 @@ func run() error {
 	courseInstructorHandler := handler.NewCourseInstructorHandler(courseInstructorService, logger)
 	enrollmentHandler := handler.NewEnrollmentHandler(enrollmentService, logger)
 
+	// Initialize handlers for course catalog & academic calendar
+	courseHandler := handler.NewCourseHandler(courseService, logger)
+	semesterHandler := handler.NewSemesterHandler(semesterService, logger)
+
 	app := fiber.New(fiber.Config{
 		AppName:      "academic-service",
 		ErrorHandler: utils.ErrorHandler,
@@ -143,6 +155,8 @@ func run() error {
 		CourseInstanceHandler:   courseInstanceHandler,
 		CourseInstructorHandler: courseInstructorHandler,
 		EnrollmentHandler:       enrollmentHandler,
+		CourseHandler:           courseHandler,
+		SemesterHandler:         semesterHandler,
 		JWTSecretKey:            []byte(cfg.JWT.SecretKey),
 	})
 

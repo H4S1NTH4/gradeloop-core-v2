@@ -67,6 +67,9 @@ func (s *courseInstanceService) CreateCourseInstance(
 	if !domain.IsValidCourseInstanceStatus(req.Status) {
 		return nil, utils.ErrBadRequest("invalid status: allowed values are Planned, Active, Completed, Cancelled")
 	}
+	if req.MaxEnrollment < 0 {
+		return nil, utils.ErrBadRequest("max_enrollment must be a non-negative integer")
+	}
 
 	// 2. Validate batch exists (not soft-deleted)
 	batch, err := s.batchRepo.GetBatchByID(req.BatchID)
@@ -95,10 +98,11 @@ func (s *courseInstanceService) CreateCourseInstance(
 
 	// 5. Persist
 	instance := &domain.CourseInstance{
-		CourseID:   req.CourseID,
-		SemesterID: req.SemesterID,
-		BatchID:    req.BatchID,
-		Status:     req.Status,
+		CourseID:      req.CourseID,
+		SemesterID:    req.SemesterID,
+		BatchID:       req.BatchID,
+		Status:        req.Status,
+		MaxEnrollment: req.MaxEnrollment,
 	}
 
 	if err := s.courseInstanceRepo.Create(instance); err != nil {
@@ -108,10 +112,11 @@ func (s *courseInstanceService) CreateCourseInstance(
 
 	// 6. Write audit log
 	changes := map[string]interface{}{
-		"course_id":   req.CourseID.String(),
-		"semester_id": req.SemesterID.String(),
-		"batch_id":    req.BatchID.String(),
-		"status":      req.Status,
+		"course_id":      req.CourseID.String(),
+		"semester_id":    req.SemesterID.String(),
+		"batch_id":       req.BatchID.String(),
+		"status":         req.Status,
+		"max_enrollment": req.MaxEnrollment,
 	}
 	if auditErr := s.auditClient.LogAction(
 		string(client.AuditActionCourseInstanceCreated),
@@ -150,6 +155,9 @@ func (s *courseInstanceService) UpdateCourseInstance(
 	if !domain.IsValidCourseInstanceStatus(req.Status) {
 		return nil, utils.ErrBadRequest("invalid status: allowed values are Planned, Active, Completed, Cancelled")
 	}
+	if req.MaxEnrollment != nil && *req.MaxEnrollment < 0 {
+		return nil, utils.ErrBadRequest("max_enrollment must be a non-negative integer")
+	}
 
 	// 2. Load existing instance
 	instance, err := s.courseInstanceRepo.GetByID(id)
@@ -162,8 +170,16 @@ func (s *courseInstanceService) UpdateCourseInstance(
 	}
 
 	// 3. Apply changes
+	changes := make(map[string]interface{})
+
 	oldStatus := instance.Status
 	instance.Status = req.Status
+	changes["status"] = map[string]string{"from": oldStatus, "to": req.Status}
+
+	if req.MaxEnrollment != nil && *req.MaxEnrollment != instance.MaxEnrollment {
+		changes["max_enrollment"] = map[string]int{"from": instance.MaxEnrollment, "to": *req.MaxEnrollment}
+		instance.MaxEnrollment = *req.MaxEnrollment
+	}
 
 	if err := s.courseInstanceRepo.Update(instance); err != nil {
 		s.logger.Error("failed to update course instance", zap.Error(err))
@@ -171,12 +187,6 @@ func (s *courseInstanceService) UpdateCourseInstance(
 	}
 
 	// 4. Write audit log
-	changes := map[string]interface{}{
-		"status": map[string]string{
-			"from": oldStatus,
-			"to":   req.Status,
-		},
-	}
 	if auditErr := s.auditClient.LogAction(
 		string(client.AuditActionCourseInstanceUpdated),
 		"course_instance",

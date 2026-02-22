@@ -11,11 +11,12 @@ import (
 // semester. course_id and semester_id are logical references to the Course
 // Catalog and Academic Calendar services — no DB foreign keys for those.
 type CourseInstance struct {
-	ID         uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	CourseID   uuid.UUID `gorm:"type:uuid;not null"                             json:"course_id"`
-	SemesterID uuid.UUID `gorm:"type:uuid;not null"                             json:"semester_id"`
-	BatchID    uuid.UUID `gorm:"type:uuid;not null;index"                       json:"batch_id"`
-	Status     string    `gorm:"type:varchar(50);not null;default:'Planned'"    json:"status"`
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	CourseID      uuid.UUID `gorm:"type:uuid;not null"                             json:"course_id"`
+	SemesterID    uuid.UUID `gorm:"type:uuid;not null"                             json:"semester_id"`
+	BatchID       uuid.UUID `gorm:"type:uuid;not null;index"                       json:"batch_id"`
+	Status        string    `gorm:"type:varchar(50);not null;default:'Planned'"    json:"status"`
+	MaxEnrollment int       `gorm:"not null;default:0"                             json:"max_enrollment"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

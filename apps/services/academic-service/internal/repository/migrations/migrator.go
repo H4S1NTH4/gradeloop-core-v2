@@ -26,8 +26,11 @@ func (m *Migrator) Run() error {
 
 	if err := m.db.AutoMigrate(
 		// Placeholder models (seeder / legacy)
-		&domain.Course{},
 		&domain.Program{},
+		// Course catalog
+		&domain.Course{},
+		&domain.CoursePrerequisite{},
+		// Academic calendar
 		&domain.Semester{},
 		// Core academic hierarchy
 		&domain.Faculty{},
@@ -129,6 +132,50 @@ func (m *Migrator) Run() error {
 		ON course_instructors(course_instance_id)
 	`).Error; err != nil {
 		m.logger.Warn("failed to create index on course_instructors(course_instance_id)", zap.Error(err))
+	}
+
+	// Unique index on course code (partial — exclude soft-deleted)
+	if err := m.db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_courses_code
+		ON courses(code)
+		WHERE deleted_at IS NULL
+	`).Error; err != nil {
+		m.logger.Warn("failed to create unique index on courses(code)", zap.Error(err))
+	}
+
+	// Index on is_active for fast active-course lookups
+	if err := m.db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_courses_is_active
+		ON courses(is_active)
+		WHERE deleted_at IS NULL
+	`).Error; err != nil {
+		m.logger.Warn("failed to create index on courses(is_active)", zap.Error(err))
+	}
+
+	// Index on prerequisite_course_id for reverse-lookup
+	if err := m.db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_course_prerequisites_prereq_id
+		ON course_prerequisites(prerequisite_course_id)
+	`).Error; err != nil {
+		m.logger.Warn("failed to create index on course_prerequisites(prerequisite_course_id)", zap.Error(err))
+	}
+
+	// Unique index on semester code (partial — exclude soft-deleted)
+	if err := m.db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_semesters_code
+		ON semesters(code)
+		WHERE deleted_at IS NULL
+	`).Error; err != nil {
+		m.logger.Warn("failed to create unique index on semesters(code)", zap.Error(err))
+	}
+
+	// Index on term_type + is_active for filtered semester queries
+	if err := m.db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_semesters_term_type
+		ON semesters(term_type)
+		WHERE deleted_at IS NULL
+	`).Error; err != nil {
+		m.logger.Warn("failed to create index on semesters(term_type)", zap.Error(err))
 	}
 
 	m.logger.Info("migrations completed successfully")

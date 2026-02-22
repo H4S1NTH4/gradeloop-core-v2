@@ -37,6 +37,18 @@ const (
 	AuditActionBatchUpdated     AuditAction = "BATCH_UPDATED"
 	AuditActionBatchDeactivated AuditAction = "BATCH_DEACTIVATED"
 
+	// Course actions
+	AuditActionCourseCreated             AuditAction = "COURSE_CREATED"
+	AuditActionCourseUpdated             AuditAction = "COURSE_UPDATED"
+	AuditActionCourseDeactivated         AuditAction = "COURSE_DEACTIVATED"
+	AuditActionCoursePrerequisiteAdded   AuditAction = "COURSE_PREREQUISITE_ADDED"
+	AuditActionCoursePrerequisiteRemoved AuditAction = "COURSE_PREREQUISITE_REMOVED"
+
+	// Semester actions
+	AuditActionSemesterCreated     AuditAction = "SEMESTER_CREATED"
+	AuditActionSemesterUpdated     AuditAction = "SEMESTER_UPDATED"
+	AuditActionSemesterDeactivated AuditAction = "SEMESTER_DEACTIVATED"
+
 	// Enrollment management actions
 	AuditActionBatchMemberAdded         AuditAction = "BATCH_MEMBER_ADDED"
 	AuditActionBatchMemberRemoved       AuditAction = "BATCH_MEMBER_REMOVED"

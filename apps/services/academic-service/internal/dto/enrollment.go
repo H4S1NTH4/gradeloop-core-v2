@@ -31,26 +31,29 @@ type BatchMemberResponse struct {
 
 // CreateCourseInstanceRequest is the payload for POST /course-instances
 type CreateCourseInstanceRequest struct {
-	CourseID   uuid.UUID `json:"course_id"`
-	SemesterID uuid.UUID `json:"semester_id"`
-	BatchID    uuid.UUID `json:"batch_id"`
-	Status     string    `json:"status"`
+	CourseID      uuid.UUID `json:"course_id"`
+	SemesterID    uuid.UUID `json:"semester_id"`
+	BatchID       uuid.UUID `json:"batch_id"`
+	Status        string    `json:"status"`
+	MaxEnrollment int       `json:"max_enrollment"`
 }
 
 // UpdateCourseInstanceRequest is the payload for PUT /course-instances/:id
 type UpdateCourseInstanceRequest struct {
-	Status string `json:"status"`
+	Status        string `json:"status"`
+	MaxEnrollment *int   `json:"max_enrollment"`
 }
 
 // CourseInstanceResponse is returned for course-instance endpoints
 type CourseInstanceResponse struct {
-	ID         uuid.UUID `json:"id"`
-	CourseID   uuid.UUID `json:"course_id"`
-	SemesterID uuid.UUID `json:"semester_id"`
-	BatchID    uuid.UUID `json:"batch_id"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID            uuid.UUID `json:"id"`
+	CourseID      uuid.UUID `json:"course_id"`
+	SemesterID    uuid.UUID `json:"semester_id"`
+	BatchID       uuid.UUID `json:"batch_id"`
+	Status        string    `json:"status"`
+	MaxEnrollment int       `json:"max_enrollment"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -111,12 +111,13 @@ func (h *CourseInstanceHandler) ListCourseInstancesByBatch(c fiber.Ctx) error {
 // representation.
 func toCourseInstanceResponse(ci *domain.CourseInstance) *dto.CourseInstanceResponse {
 	return &dto.CourseInstanceResponse{
-		ID:         ci.ID,
-		CourseID:   ci.CourseID,
-		SemesterID: ci.SemesterID,
-		BatchID:    ci.BatchID,
-		Status:     ci.Status,
-		CreatedAt:  ci.CreatedAt,
-		UpdatedAt:  ci.UpdatedAt,
+		ID:            ci.ID,
+		CourseID:      ci.CourseID,
+		SemesterID:    ci.SemesterID,
+		BatchID:       ci.BatchID,
+		Status:        ci.Status,
+		MaxEnrollment: ci.MaxEnrollment,
+		CreatedAt:     ci.CreatedAt,
+		UpdatedAt:     ci.UpdatedAt,
 	}
 }
