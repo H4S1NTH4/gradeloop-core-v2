@@ -10,7 +10,13 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -93,7 +99,7 @@ export default function UsersPage() {
             Manage user accounts and permissions
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2 shadow-sm">
           <Plus className="h-4 w-4" />
           Add User
         </Button>
@@ -101,7 +107,7 @@ export default function UsersPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardDescription>Total Users</CardDescription>
             <CardTitle className="text-2xl">2,845</CardTitle>
@@ -112,7 +118,7 @@ export default function UsersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardDescription>Active Users</CardDescription>
             <CardTitle className="text-2xl">2,650</CardTitle>
@@ -123,7 +129,7 @@ export default function UsersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardDescription>Teachers</CardDescription>
             <CardTitle className="text-2xl">156</CardTitle>
@@ -134,7 +140,7 @@ export default function UsersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardDescription>Students</CardDescription>
             <CardTitle className="text-2xl">2,689</CardTitle>
@@ -148,7 +154,7 @@ export default function UsersPage() {
       </div>
 
       {/* Search and Filter */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
@@ -168,7 +174,7 @@ export default function UsersPage() {
       </Card>
 
       {/* Users List */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>All Users</CardTitle>
           <CardDescription>A list of all users in your system</CardDescription>
@@ -178,12 +184,15 @@ export default function UsersPage() {
             {mockUsers.map((user) => (
               <div
                 key={user.id}
-                className="flex items-center justify-between p-4 border rounded-lg dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
+                className="flex items-center justify-between p-4 border border-zinc-200 rounded-lg dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors shadow-sm hover:shadow-md"
               >
                 <div className="flex items-center gap-4 flex-1">
                   <Avatar className="h-12 w-12">
                     <AvatarImage
-                      src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                      src={
+                        user.avatar ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`
+                      }
                       alt={user.name}
                     />
                     <AvatarFallback>
@@ -227,8 +236,8 @@ export default function UsersPage() {
                         user.role === "Admin"
                           ? "bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400"
                           : user.role === "Teacher"
-                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                          : "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
                       }`}
                     >
                       {user.role}
@@ -262,7 +271,7 @@ export default function UsersPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between mt-6 pt-6 border-t dark:border-zinc-800">
+          <div className="flex items-center justify-between mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Showing <span className="font-medium">1</span> to{" "}
               <span className="font-medium">5</span> of{" "}

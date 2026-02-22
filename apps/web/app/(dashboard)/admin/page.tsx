@@ -9,7 +9,13 @@ import {
   AlertCircle,
   GraduationCap,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function AdminDashboardPage() {
@@ -128,7 +134,8 @@ export default function AdminDashboardPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-          Welcome back! Here's what's happening with your platform today.
+          Welcome back! Here&apos;s what&apos;s happening with your platform
+          today.
         </p>
       </div>
 
@@ -137,7 +144,10 @@ export default function AdminDashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
+            <Card
+              key={stat.title}
+              className="shadow-sm hover:shadow-md transition-shadow"
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
                   {stat.title}
@@ -160,7 +170,7 @@ export default function AdminDashboardPage() {
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Activity */}
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest updates from your platform</CardDescription>
@@ -172,7 +182,7 @@ export default function AdminDashboardPage() {
                 return (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-4 pb-4 last:pb-0 border-b last:border-0 dark:border-zinc-800"
+                    className="flex items-start gap-4 pb-4 last:pb-0 border-b last:border-0 border-zinc-200 dark:border-zinc-800"
                   >
                     <div className={`mt-1 ${activity.color}`}>
                       <Icon className="h-5 w-5" />
@@ -197,7 +207,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Top Courses */}
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Top Courses</CardTitle>
             <CardDescription>Most popular courses this month</CardDescription>
@@ -207,7 +217,7 @@ export default function AdminDashboardPage() {
               {topCourses.map((course) => (
                 <div
                   key={course.id}
-                  className="flex items-center justify-between pb-4 last:pb-0 border-b last:border-0 dark:border-zinc-800"
+                  className="flex items-center justify-between pb-4 last:pb-0 border-b last:border-0 border-zinc-200 dark:border-zinc-800"
                 >
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium">{course.name}</p>
@@ -216,7 +226,9 @@ export default function AdminDashboardPage() {
                     </p>
                   </div>
                   <div className="text-right space-y-1">
-                    <p className="text-sm font-medium">{course.students} students</p>
+                    <p className="text-sm font-medium">
+                      {course.students} students
+                    </p>
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-16 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
                         <div
@@ -240,7 +252,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
           <CardDescription>Common tasks and shortcuts</CardDescription>

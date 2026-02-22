@@ -2,13 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import {
-  Search,
-  Bell,
-  Menu,
-  Moon,
-  Sun,
-} from "lucide-react";
+import { Search, Bell, Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,21 +31,23 @@ export function Topbar({ onMenuClick, className }: TopbarProps) {
   const [theme, setTheme] = React.useState<"light" | "dark">("light");
   const [mounted, setMounted] = React.useState(false);
 
+  const applyTheme = React.useCallback((newTheme: "light" | "dark") => {
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(newTheme);
+  }, []);
+
   React.useEffect(() => {
     setMounted(true);
     // Check for saved theme preference or default to light
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
     const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
     setTheme(initialTheme);
     applyTheme(initialTheme);
-  }, []);
-
-  const applyTheme = (newTheme: "light" | "dark") => {
-    const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(newTheme);
-  };
+  }, [applyTheme]);
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -76,8 +72,8 @@ export function Topbar({ onMenuClick, className }: TopbarProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-white px-6 dark:bg-zinc-950",
-        className
+        "sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 px-6 shadow-sm dark:bg-zinc-950/95 dark:supports-[backdrop-filter]:bg-zinc-950/60",
+        className,
       )}
     >
       {/* Mobile Menu Button */}
@@ -124,7 +120,7 @@ export function Topbar({ onMenuClick, className }: TopbarProps) {
         <Input
           type="search"
           placeholder="Search..."
-          className="w-full pl-9 pr-4"
+          className="w-full pl-9 pr-4 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
         />
       </div>
 
@@ -135,7 +131,7 @@ export function Topbar({ onMenuClick, className }: TopbarProps) {
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
-          className="h-9 w-9"
+          className="h-9 w-9 hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           {mounted && (
             <>
@@ -152,7 +148,11 @@ export function Topbar({ onMenuClick, className }: TopbarProps) {
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-9 w-9 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
               <Bell className="h-5 w-5" />
               <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
@@ -171,7 +171,9 @@ export function Topbar({ onMenuClick, className }: TopbarProps) {
             <div className="border-t">
               <DropdownMenuItem className="flex flex-col items-start gap-1 p-4">
                 <div className="flex w-full items-start justify-between">
-                  <p className="text-sm font-medium">New assignment submitted</p>
+                  <p className="text-sm font-medium">
+                    New assignment submitted
+                  </p>
                   <span className="text-xs text-zinc-500">5m ago</span>
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -180,7 +182,9 @@ export function Topbar({ onMenuClick, className }: TopbarProps) {
               </DropdownMenuItem>
               <DropdownMenuItem className="flex flex-col items-start gap-1 p-4">
                 <div className="flex w-full items-start justify-between">
-                  <p className="text-sm font-medium">Course enrollment request</p>
+                  <p className="text-sm font-medium">
+                    Course enrollment request
+                  </p>
                   <span className="text-xs text-zinc-500">1h ago</span>
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">

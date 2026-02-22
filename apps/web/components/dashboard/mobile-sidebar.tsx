@@ -93,10 +93,10 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-64 p-0">
+      <SheetContent side="left" className="w-64 p-0 bg-white dark:bg-zinc-950">
         <div className="flex h-full flex-col">
           {/* Logo Area */}
-          <SheetHeader className="h-16 flex-row items-center border-b px-4">
+          <SheetHeader className="h-16 flex-row items-center border-b bg-zinc-50/50 dark:bg-zinc-900/50 px-4">
             <Link
               href="/admin"
               className="flex items-center gap-2"
@@ -128,8 +128,9 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
                       variant="ghost"
                       className={cn(
                         "w-full justify-start gap-3 px-3",
-                        isActive &&
-                          "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+                        isActive
+                          ? "bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90"
+                          : "hover:bg-zinc-100 dark:hover:bg-zinc-800",
                       )}
                     >
                       <Icon className="h-5 w-5 shrink-0" />
@@ -149,12 +150,18 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
           <Separator />
 
           {/* User Profile Section */}
-          <div className="p-3">
+          <div className="p-3 bg-zinc-50/50 dark:bg-zinc-900/50">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-3 px-3">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 px-3"
+                >
                   <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src="https://github.com/shadcn.png" alt="User" />
+                    <AvatarImage
+                      src="https://github.com/shadcn.png"
+                      alt="User"
+                    />
                     <AvatarFallback>AD</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-1 flex-col items-start text-left text-sm">
