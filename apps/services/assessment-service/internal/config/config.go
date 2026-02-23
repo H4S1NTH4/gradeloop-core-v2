@@ -10,11 +10,14 @@ import (
 
 // Config holds all configuration for the assessment service.
 type Config struct {
-	Server        ServerConfig
-	Database      DatabaseConfig
-	JWT           JWTConfig
-	FrontendURL   string
-	IAMServiceURL string
+	Server         ServerConfig
+	Database       DatabaseConfig
+	JWT            JWTConfig
+	MinIO          MinIOConfig
+	RabbitMQ       RabbitMQConfig
+	FrontendURL    string
+	IAMServiceURL  string
+	AcademicSvcURL string
 }
 
 // ServerConfig holds HTTP server settings.
@@ -36,6 +39,26 @@ type DatabaseConfig struct {
 // JWTConfig holds JWT signing settings.
 type JWTConfig struct {
 	SecretKey string
+}
+
+// MinIOConfig holds object-storage connection settings.
+type MinIOConfig struct {
+	Endpoint   string
+	AccessKey  string
+	SecretKey  string
+	BucketName string
+	UseSSL     bool
+}
+
+// RabbitMQConfig holds AMQP broker connection settings.
+type RabbitMQConfig struct {
+	// URL is the full AMQP connection string, e.g.
+	// amqp://guest:guest@rabbitmq:5672/
+	URL string
+
+	// SubmissionWorkers is the number of concurrent goroutines that may
+	// process submission jobs simultaneously.  Defaults to 8.
+	SubmissionWorkers int
 }
 
 // Load reads configuration from environment variables, falling back to
@@ -63,8 +86,20 @@ func Load() (*Config, error) {
 		JWT: JWTConfig{
 			SecretKey: getEnv("JWT_SECRET_KEY", ""),
 		},
-		FrontendURL:   getEnv("FRONTEND_URL", "http://localhost:3000"),
-		IAMServiceURL: getEnv("IAM_SERVICE_URL", "http://localhost:8081"),
+		MinIO: MinIOConfig{
+			Endpoint:   getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			AccessKey:  getEnv("MINIO_ACCESS_KEY", "minio"),
+			SecretKey:  getEnv("MINIO_SECRET_KEY", "minio123"),
+			BucketName: getEnv("MINIO_BUCKET", "submissions"),
+			UseSSL:     getEnvAsBool("MINIO_USE_SSL", false),
+		},
+		RabbitMQ: RabbitMQConfig{
+			URL:               getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+			SubmissionWorkers: getEnvAsInt("RABBITMQ_SUBMISSION_WORKERS", 8),
+		},
+		FrontendURL:    getEnv("FRONTEND_URL", "http://localhost:3000"),
+		IAMServiceURL:  getEnv("IAM_SERVICE_URL", "http://localhost:8081"),
+		AcademicSvcURL: getEnv("ACADEMIC_SERVICE_URL", "http://localhost:8083"),
 	}, nil
 }
 
@@ -94,6 +129,18 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 		return defaultValue
 	}
 	result, err := strconv.ParseBool(value)
+	if err != nil {
+		return defaultValue
+	}
+	return result
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	result, err := strconv.Atoi(value)
 	if err != nil {
 		return defaultValue
 	}

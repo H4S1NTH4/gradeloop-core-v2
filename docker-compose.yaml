@@ -223,12 +223,13 @@ services:
       - dev-assessment
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.assessment.rule=PathPrefix(`/api/v1/assignments`)"
+      # Route assignments, submissions, and groups through the assessment service
+      - "traefik.http.routers.assessment.rule=PathPrefix(`/api/v1/assignments`) || PathPrefix(`/api/v1/submissions`) || PathPrefix(`/api/v1/groups`)"
       - "traefik.http.routers.assessment.priority=100"
       - "traefik.http.routers.assessment.entrypoints=web"
       - "traefik.http.services.assessment-service.loadbalancer.server.port=8084"
-      # Request Size Limiting (1MB)
-      - "traefik.http.middlewares.assessment-limit.buffering.maxRequestBodyBytes=1048576"
+      # Request Size Limiting (10MB — code submissions can be larger than 1MB)
+      - "traefik.http.middlewares.assessment-limit.buffering.maxRequestBodyBytes=10485760"
       # Rate Limiting
       - "traefik.http.middlewares.assessment-ratelimit.ratelimit.average=500"
       - "traefik.http.middlewares.assessment-ratelimit.ratelimit.period=1m"
@@ -251,12 +252,26 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - FRONTEND_URL=${FRONTEND_URL}
       - IAM_SERVICE_URL=http://iam-service:8081
+      - ACADEMIC_SERVICE_URL=http://academic-service:8083
+      # MinIO object storage
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - MINIO_BUCKET=submissions
+      - MINIO_USE_SSL=false
+      # RabbitMQ message queue
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RABBITMQ_SUBMISSION_WORKERS=${ASSESSMENT_SVC_SUBMISSION_WORKERS:-8}
 
     expose:
       - "8084"
 
     depends_on:
       iam-service:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
     networks:
@@ -268,6 +283,44 @@ services:
       timeout: 5s
       retries: 5
       start_period: 120s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+  # =============================================================================
+  # MinIO Object Storage
+  # =============================================================================
+  minio:
+    image: minio/minio
+    container_name: gradeloop-minio
+    restart: unless-stopped
+
+    command: server /data --console-address ":9001"
+
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+
+    volumes:
+      - minio-data:/data
+
+    networks:
+      - gradeloop-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
     logging:
       driver: "json-file"
@@ -315,3 +368,10 @@ services:
 networks:
   gradeloop-network:
     driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  minio-data:
+    driver: local

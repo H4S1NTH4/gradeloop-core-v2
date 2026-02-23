@@ -4,15 +4,17 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/gradeloop/assessment-service/internal/handler"
-	"github.com/gradeloop/assessment-service/internal/middleware"
-	"github.com/gradeloop/assessment-service/internal/utils"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/handler"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/middleware"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/utils"
 )
 
 // Config holds all handler dependencies required to set up routes.
 type Config struct {
 	HealthHandler     *handler.HealthHandler
 	AssignmentHandler *handler.AssignmentHandler
+	SubmissionHandler *handler.SubmissionHandler
+	GroupHandler      *handler.GroupHandler
 	JWTSecretKey      []byte
 }
 
@@ -79,9 +81,46 @@ func SetupRoutes(app *fiber.App, cfg Config) {
 	// "course-instance" is not swallowed as a UUID parameter value.
 	assignments.Get("/course-instance/:courseInstanceId", cfg.AssignmentHandler.ListAssignmentsByCourseInstance)
 
+	// GET    /api/v1/assignments/:id/submissions                  — list all versions
+	// GET    /api/v1/assignments/:id/latest                       — get latest version
+	// NOTE: These must be registered BEFORE GET /:id to prevent Fiber from
+	// routing the literal sub-segments as UUID param values.
+	assignments.Get("/:id/submissions", cfg.SubmissionHandler.ListSubmissions)
+	assignments.Get("/:id/latest", cfg.SubmissionHandler.GetLatestSubmission)
+
 	// GET    /api/v1/assignments/:id                              — get by ID (active only)
 	assignments.Get("/:id", cfg.AssignmentHandler.GetAssignment)
 
 	// PATCH  /api/v1/assignments/:id                              — update / soft-delete
 	assignments.Patch("/:id", cfg.AssignmentHandler.UpdateAssignment)
+
+	// ── Submissions ───────────────────────────────────────────────────────────
+	// Submissions are accessible to all authenticated users (enrollment is
+	// validated at the service layer for individual submissions).
+	submissions := protected.Group("/submissions")
+
+	// POST   /api/v1/submissions                — create (versioned, immutable)
+	submissions.Post("/", cfg.SubmissionHandler.CreateSubmission)
+
+	// GET    /api/v1/submissions/:id/code       — retrieve source code from MinIO
+	// NOTE: Must be registered BEFORE GET /:id to prevent the literal "code"
+	// segment from being swallowed as a UUID param value.
+	submissions.Get("/:id/code", cfg.SubmissionHandler.GetSubmissionCode)
+
+	// GET    /api/v1/submissions/:id            — get submission metadata
+	submissions.Get("/:id", cfg.SubmissionHandler.GetSubmission)
+
+	// PUT    /api/v1/submissions/:id            — always 405 (submissions are immutable)
+	submissions.Put("/:id", cfg.SubmissionHandler.UpdateSubmission)
+
+	// ── Groups ────────────────────────────────────────────────────────────────
+	// Groups are accessible to all authenticated users — a student may create
+	// their own group for a group-enabled assignment.
+	groups := protected.Group("/groups")
+
+	// POST   /api/v1/groups                     — create a submission group
+	groups.Post("/", cfg.GroupHandler.CreateGroup)
+
+	// GET    /api/v1/groups/:id                 — get group metadata + members
+	groups.Get("/:id", cfg.GroupHandler.GetGroup)
 }

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   Plus,
   Search,
@@ -15,13 +15,13 @@ import {
   Users,
   UserCheck,
   UserX,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { SelectNative } from '@/components/ui/select-native';
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SelectNative } from "@/components/ui/select-native";
 import {
   Table,
   TableBody,
@@ -29,7 +29,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,39 +37,39 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { CreateUserDialog } from '@/components/admin/create-user-dialog';
-import { EditUserDialog } from '@/components/admin/edit-user-dialog';
-import { UserDetailsDialog } from '@/components/admin/user-details-dialog';
-import { RevokeSessionsDialog } from '@/components/admin/revoke-sessions-dialog';
-import { DeleteUserDialog } from '@/components/admin/delete-user-dialog';
-import { useAdminUsersStore } from '@/lib/stores/adminUsersStore';
-import { usersApi, handleApiError } from '@/lib/api/users';
-import type { UserListItem } from '@/types/auth.types';
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { CreateUserDialog } from "@/components/admin/create-user-dialog";
+import { EditUserDialog } from "@/components/admin/edit-user-dialog";
+import { UserDetailsDialog } from "@/components/admin/user-details-dialog";
+import { RevokeSessionsDialog } from "@/components/admin/revoke-sessions-dialog";
+import { DeleteUserDialog } from "@/components/admin/delete-user-dialog";
+import { useAdminUsersStore } from "@/lib/stores/adminUsersStore";
+import { usersApi, handleApiError } from "@/lib/api/users";
+import type { UserListItem } from "@/types/auth.types";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function initials(username: string) {
   return username
     .split(/[.\-_\s@]/)
-    .map((p) => p[0]?.toUpperCase() ?? '')
+    .map((p) => p[0]?.toUpperCase() ?? "")
     .slice(0, 2)
-    .join('');
+    .join("");
 }
 
 function roleBadgeVariant(roleName: string) {
   const l = roleName.toLowerCase();
-  if (l.includes('admin')) return 'purple' as const;
-  if (l.includes('instructor') || l.includes('teacher')) return 'info' as const;
-  if (l.includes('student') || l.includes('learner')) return 'success' as const;
-  return 'secondary' as const;
+  if (l.includes("admin")) return "purple" as const;
+  if (l.includes("instructor") || l.includes("teacher")) return "info" as const;
+  if (l.includes("student") || l.includes("learner")) return "success" as const;
+  return "secondary" as const;
 }
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
-    <Badge variant={active ? 'success' : 'destructive'}>
-      {active ? 'Active' : 'Inactive'}
+    <Badge variant={active ? "success" : "destructive"}>
+      {active ? "Active" : "Inactive"}
     </Badge>
   );
 }
@@ -88,10 +88,18 @@ function TableSkeleton({ rows = 8 }: { rows?: number }) {
               </div>
             </div>
           </TableCell>
-          <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-          <TableCell><Skeleton className="h-3.5 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-3.5 w-24" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-8 w-8 rounded-md" />
+          </TableCell>
         </TableRow>
       ))}
     </>
@@ -111,19 +119,22 @@ export default function UsersPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   // ── Filter state ────────────────────────────────────────────────────────
-  const [search, setSearch] = React.useState('');
-  const [debouncedSearch, setDebouncedSearch] = React.useState('');
-  const [roleFilter, setRoleFilter] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState('');
+  const [search, setSearch] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState("");
 
   // ── Dialog state ────────────────────────────────────────────────────────
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editUser, setEditUser] = React.useState<UserListItem | null>(null);
-  const [detailsUser, setDetailsUser] = React.useState<UserListItem | null>(null);
+  const [detailsUser, setDetailsUser] = React.useState<UserListItem | null>(
+    null,
+  );
   const [revokeUser, setRevokeUser] = React.useState<UserListItem | null>(null);
   const [deleteUser, setDeleteUser] = React.useState<UserListItem | null>(null);
 
-  const { roles, rolesLoading, rolesError, fetchRoles, refetchRoles } = useAdminUsersStore();
+  const { roles, rolesLoading, rolesError, fetchRoles, refetchRoles } =
+    useAdminUsersStore();
 
   // ── Debounce search ──────────────────────────────────────────────────────
   React.useEffect(() => {
@@ -131,7 +142,9 @@ export default function UsersPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  React.useEffect(() => { setPage(1); }, [debouncedSearch, roleFilter, statusFilter]);
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, roleFilter, statusFilter]);
 
   // ── Fetch users ──────────────────────────────────────────────────────────
   const fetchUsers = React.useCallback(async () => {
@@ -152,19 +165,26 @@ export default function UsersPage() {
     }
   }, [page, roleFilter]);
 
-  React.useEffect(() => { fetchUsers(); }, [fetchUsers]);
-  React.useEffect(() => { fetchRoles(); }, [fetchRoles]);
+  React.useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+  React.useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
 
   // ── Client-side filtering (search & status only — role filter is server-side) ──
   const displayUsers = React.useMemo(() => {
     return users.filter((u) => {
       if (debouncedSearch) {
         const q = debouncedSearch.toLowerCase();
-        if (!u.username.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q))
+        if (
+          !u.username.toLowerCase().includes(q) &&
+          !u.email.toLowerCase().includes(q)
+        )
           return false;
       }
-      if (statusFilter === 'active' && !u.is_active) return false;
-      if (statusFilter === 'inactive' && u.is_active) return false;
+      if (statusFilter === "active" && !u.is_active) return false;
+      if (statusFilter === "inactive" && u.is_active) return false;
       return true;
     });
   }, [users, debouncedSearch, statusFilter]);
@@ -188,7 +208,6 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-
       {/* Page Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -260,10 +279,16 @@ export default function UsersPage() {
             title={rolesError ? `Roles unavailable: ${rolesError}` : undefined}
           >
             <option value="">
-              {rolesLoading ? 'Loading roles…' : rolesError ? 'Roles unavailable' : 'All roles'}
+              {rolesLoading
+                ? "Loading roles…"
+                : rolesError
+                  ? "Roles unavailable"
+                  : "All roles"}
             </option>
             {roles.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
             ))}
           </SelectNative>
           {rolesError && (
@@ -291,7 +316,7 @@ export default function UsersPage() {
             disabled={loading}
             title="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </CardContent>
       </Card>
@@ -301,7 +326,9 @@ export default function UsersPage() {
         {error && !loading ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <p className="text-sm text-red-500">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchUsers}>Try again</Button>
+            <Button variant="outline" size="sm" onClick={fetchUsers}>
+              Try again
+            </Button>
           </div>
         ) : (
           <>
@@ -312,7 +339,9 @@ export default function UsersPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Joined</TableHead>
-                  <TableHead className="hidden lg:table-cell">Last Login</TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Last Login
+                  </TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
@@ -321,13 +350,16 @@ export default function UsersPage() {
                   <TableSkeleton rows={8} />
                 ) : displayUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-16 text-center text-zinc-500">
+                    <TableCell
+                      colSpan={6}
+                      className="py-16 text-center text-zinc-500"
+                    >
                       <Users className="mx-auto h-10 w-10 text-zinc-300 dark:text-zinc-600 mb-3" />
                       <p className="font-medium">No users found</p>
                       <p className="text-sm mt-1">
                         {debouncedSearch || roleFilter || statusFilter
-                          ? 'Try adjusting your search or filters.'
-                          : 'Get started by adding the first user.'}
+                          ? "Try adjusting your search or filters."
+                          : "Get started by adding the first user."}
                       </p>
                     </TableCell>
                   </TableRow>
@@ -342,8 +374,12 @@ export default function UsersPage() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">{user.username}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user.email}</p>
+                            <p className="font-medium text-sm truncate">
+                              {user.username}
+                            </p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                              {user.email}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
@@ -356,12 +392,17 @@ export default function UsersPage() {
                         <StatusBadge active={user.is_active} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                        {new Date(user.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' })}
+                        {new Date(user.created_at).toLocaleDateString("en-US", {
+                          dateStyle: "medium",
+                        })}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                         {user.last_login_at
-                          ? new Date(user.last_login_at).toLocaleDateString('en-US', { dateStyle: 'medium' })
-                          : '—'}
+                          ? new Date(user.last_login_at).toLocaleDateString(
+                              "en-US",
+                              { dateStyle: "medium" },
+                            )
+                          : "—"}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -374,21 +415,34 @@ export default function UsersPage() {
                           <DropdownMenuContent align="end" className="w-44">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2" onClick={() => setDetailsUser(user)}>
-                              <Eye className="h-4 w-4" />View Details
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() => setDetailsUser(user)}
+                            >
+                              <Eye className="h-4 w-4" />
+                              View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2" onClick={() => setEditUser(user)}>
-                              <Pencil className="h-4 w-4" />Edit
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() => setEditUser(user)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2" onClick={() => setRevokeUser(user)}>
-                              <ShieldOff className="h-4 w-4" />Revoke Sessions
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={() => setRevokeUser(user)}
+                            >
+                              <ShieldOff className="h-4 w-4" />
+                              Revoke Sessions
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="gap-2 text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                               onClick={() => setDeleteUser(user)}
                             >
-                              <Trash2 className="h-4 w-4" />Delete
+                              <Trash2 className="h-4 w-4" />
+                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -403,33 +457,42 @@ export default function UsersPage() {
             {!loading && users.length > 0 && (
               <div className="flex items-center justify-between border-t border-zinc-200 dark:border-zinc-800 px-4 py-3">
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Showing{' '}
+                  Showing{" "}
                   <span className="font-medium text-zinc-900 dark:text-zinc-50">
                     {(page - 1) * PAGE_LIMIT + 1}
-                  </span>–
+                  </span>
+                  –
                   <span className="font-medium text-zinc-900 dark:text-zinc-50">
                     {Math.min(page * PAGE_LIMIT, total)}
-                  </span>{' '}
-                  of{' '}
+                  </span>{" "}
+                  of{" "}
                   <span className="font-medium text-zinc-900 dark:text-zinc-50">
                     {total.toLocaleString()}
                   </span>
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline" size="sm" className="gap-1"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1 || loading}
                   >
-                    <ChevronLeft className="h-4 w-4" />Prev
+                    <ChevronLeft className="h-4 w-4" />
+                    Prev
                   </Button>
-                  <span className="text-sm text-zinc-500 px-1">{page} / {totalPages}</span>
+                  <span className="text-sm text-zinc-500 px-1">
+                    {page} / {totalPages}
+                  </span>
                   <Button
-                    variant="outline" size="sm" className="gap-1"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages || loading}
                   >
-                    Next<ChevronRight className="h-4 w-4" />
+                    Next
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -454,9 +517,18 @@ export default function UsersPage() {
         user={detailsUser}
         open={!!detailsUser}
         onOpenChange={(open) => !open && setDetailsUser(null)}
-        onEdit={(u) => { setDetailsUser(null); setEditUser(u); }}
-        onRevokeSessions={(u) => { setDetailsUser(null); setRevokeUser(u); }}
-        onDelete={(u) => { setDetailsUser(null); setDeleteUser(u); }}
+        onEdit={(u) => {
+          setDetailsUser(null);
+          setEditUser(u);
+        }}
+        onRevokeSessions={(u) => {
+          setDetailsUser(null);
+          setRevokeUser(u);
+        }}
+        onDelete={(u) => {
+          setDetailsUser(null);
+          setDeleteUser(u);
+        }}
       />
       <RevokeSessionsDialog
         user={revokeUser}

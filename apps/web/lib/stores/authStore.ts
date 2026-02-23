@@ -191,7 +191,10 @@ export const useAuthStore = create<AuthState>()(
       }),
       // accessToken and refreshToken are intentionally excluded from persistence.
       // The refresh token lives in an HttpOnly cookie managed by the browser.
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     },
   ),
 );

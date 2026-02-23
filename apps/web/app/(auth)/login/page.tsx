@@ -30,12 +30,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // If the user already has a valid session, redirect them away from login
-  useEffect(() => {
-    if (isHydrated && isAuthenticated) {
-      router.replace(getRedirectPath());
-    }
-  }, [isHydrated, isAuthenticated, getRedirectPath, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
