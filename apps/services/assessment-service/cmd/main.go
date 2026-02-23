@@ -10,15 +10,17 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
-	"github.com/gradeloop/assessment-service/internal/client"
-	"github.com/gradeloop/assessment-service/internal/config"
-	"github.com/gradeloop/assessment-service/internal/handler"
-	"github.com/gradeloop/assessment-service/internal/middleware"
-	"github.com/gradeloop/assessment-service/internal/repository"
-	"github.com/gradeloop/assessment-service/internal/repository/migrations"
-	"github.com/gradeloop/assessment-service/internal/router"
-	"github.com/gradeloop/assessment-service/internal/service"
-	"github.com/gradeloop/assessment-service/internal/utils"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/client"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/config"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/handler"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/middleware"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/queue"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/repository"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/repository/migrations"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/router"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/service"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/storage"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -57,18 +59,92 @@ func run() error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	// ── Audit client ─────────────────────────────────────────────────────────
+	// ── Object Storage (MinIO) ────────────────────────────────────────────────
+	minioStorage, err := storage.NewMinIOStorage(
+		cfg.MinIO.Endpoint,
+		cfg.MinIO.AccessKey,
+		cfg.MinIO.SecretKey,
+		cfg.MinIO.BucketName,
+		cfg.MinIO.UseSSL,
+		logger,
+	)
+	if err != nil {
+		// MinIO unavailability is a hard startup failure — the service cannot
+		// accept submissions without object storage.
+		return fmt.Errorf("connecting to minio: %w", err)
+	}
+	logger.Info("connected to minio",
+		zap.String("endpoint", cfg.MinIO.Endpoint),
+		zap.String("bucket", cfg.MinIO.BucketName),
+	)
+
+	// ── RabbitMQ ─────────────────────────────────────────────────────────────
+	rmq, err := queue.NewRabbitMQ(cfg.RabbitMQ.URL, logger)
+	if err != nil {
+		return fmt.Errorf("connecting to rabbitmq: %w", err)
+	}
+	defer rmq.Close()
+
+	// Watch for dropped connections and transparently reconnect in the
+	// background.  This goroutine exits when rmq.Close() is called.
+	go rmq.WatchReconnect()
+
+	logger.Info("connected to rabbitmq", zap.String("url", cfg.RabbitMQ.URL))
+
+	// ── External clients ─────────────────────────────────────────────────────
 	auditClient := client.NewAuditClient(cfg.IAMServiceURL, logger)
+	academicClient := client.NewAcademicClient(cfg.AcademicSvcURL, logger)
 
 	// ── Repositories ─────────────────────────────────────────────────────────
 	assignmentRepo := repository.NewAssignmentRepository(db.DB)
+	submissionRepo := repository.NewSubmissionRepository(db.DB)
+	groupRepo := repository.NewGroupRepository(db.DB)
+
+	// ── Message queue: publisher + worker + consumer ──────────────────────────
+	submissionPublisher := queue.NewSubmissionPublisher(rmq, logger)
+
+	submissionWorker := service.NewSubmissionWorker(
+		submissionRepo,
+		minioStorage,
+		auditClient,
+		db.DB,
+		logger,
+	)
+
+	submissionConsumer := queue.NewSubmissionConsumer(
+		rmq,
+		submissionWorker,
+		cfg.RabbitMQ.SubmissionWorkers,
+		logger,
+	)
 
 	// ── Services ─────────────────────────────────────────────────────────────
 	assignmentService := service.NewAssignmentService(assignmentRepo, auditClient, logger)
 
+	submissionService := service.NewSubmissionService(
+		submissionRepo,
+		groupRepo,
+		assignmentRepo,
+		minioStorage,
+		submissionPublisher,
+		auditClient,
+		academicClient,
+		db.DB,
+		logger,
+	)
+
+	groupService := service.NewGroupService(
+		groupRepo,
+		assignmentRepo,
+		auditClient,
+		logger,
+	)
+
 	// ── Handlers ─────────────────────────────────────────────────────────────
 	healthHandler := handler.NewHealthHandler()
 	assignmentHandler := handler.NewAssignmentHandler(assignmentService, logger)
+	submissionHandler := handler.NewSubmissionHandler(submissionService, logger)
+	groupHandler := handler.NewGroupHandler(groupService, logger)
 
 	// ── Fiber app ────────────────────────────────────────────────────────────
 	app := fiber.New(fiber.Config{
@@ -89,12 +165,26 @@ func run() error {
 	router.SetupRoutes(app, router.Config{
 		HealthHandler:     healthHandler,
 		AssignmentHandler: assignmentHandler,
+		SubmissionHandler: submissionHandler,
+		GroupHandler:      groupHandler,
 		JWTSecretKey:      []byte(cfg.JWT.SecretKey),
 	})
 
 	// ── Graceful shutdown ────────────────────────────────────────────────────
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Consumer context — cancelled on shutdown so the consumer drains
+	// in-flight jobs before the process exits.
+	consumerCtx, cancelConsumer := context.WithCancel(context.Background())
+	defer cancelConsumer()
+
+	// Start the submission consumer pool in the background.
+	go submissionConsumer.Start(consumerCtx)
+
+	logger.Info("submission consumer pool started",
+		zap.Int("workers", cfg.RabbitMQ.SubmissionWorkers),
+	)
 
 	go func() {
 		addr := fmt.Sprintf(":%s", cfg.Server.Port)
@@ -108,13 +198,23 @@ func run() error {
 	<-sigChan
 	logger.Info("shutdown signal received, stopping server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// 1. Stop accepting new HTTP requests.
+	httpCtx, httpCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer httpCancel()
 
-	if err := app.ShutdownWithContext(ctx); err != nil {
+	if err := app.ShutdownWithContext(httpCtx); err != nil {
 		logger.Error("server shutdown error", zap.Error(err))
 		return fmt.Errorf("shutting down server: %w", err)
 	}
+
+	// 2. Signal the consumer to drain remaining jobs.
+	cancelConsumer()
+
+	// Allow up to 30 s for the consumer to finish in-flight processing before
+	// the process exits.  The defer on consumerCtx cancel is already called,
+	// but we give the goroutine time to finish its current job.
+	logger.Info("waiting for submission consumer to drain...")
+	time.Sleep(2 * time.Second)
 
 	logger.Info("server stopped gracefully")
 	return nil

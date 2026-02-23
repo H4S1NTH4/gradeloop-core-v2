@@ -84,3 +84,7 @@ func ErrConflict(message string) *AppError {
 func ErrInternal(message string, err error) *AppError {
 	return NewAppError(http.StatusInternalServerError, message, err)
 }
+
+func ErrMethodNotAllowed(message string) *AppError {
+	return NewAppError(http.StatusMethodNotAllowed, message, nil)
+}
