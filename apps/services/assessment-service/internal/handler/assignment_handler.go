@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/gradeloop/assessment-service/internal/dto"
-	"github.com/gradeloop/assessment-service/internal/service"
-	"github.com/gradeloop/assessment-service/internal/utils"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/dto"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/service"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/utils"
 	"go.uber.org/zap"
 )
 

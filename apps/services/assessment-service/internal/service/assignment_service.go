@@ -2,11 +2,11 @@ package service
 
 import (
 	"github.com/google/uuid"
-	"github.com/gradeloop/assessment-service/internal/client"
-	"github.com/gradeloop/assessment-service/internal/domain"
-	"github.com/gradeloop/assessment-service/internal/dto"
-	"github.com/gradeloop/assessment-service/internal/repository"
-	"github.com/gradeloop/assessment-service/internal/utils"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/client"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/domain"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/dto"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/repository"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/utils"
 	"go.uber.org/zap"
 )
 

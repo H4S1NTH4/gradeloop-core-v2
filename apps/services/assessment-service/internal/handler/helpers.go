@@ -3,9 +3,9 @@ package handler
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
-	"github.com/gradeloop/assessment-service/internal/domain"
-	"github.com/gradeloop/assessment-service/internal/dto"
-	"github.com/gradeloop/assessment-service/internal/utils"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/domain"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/dto"
+	"github.com/4yrg/gradeloop-core-v2/assessment-service/internal/utils"
 )
 
 // parseQueryUUID parses a raw UUID string from a query parameter.

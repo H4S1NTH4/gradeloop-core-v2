@@ -18,6 +18,12 @@ const (
 	AuditActionAssignmentCreated     AuditAction = "ASSIGNMENT_CREATED"
 	AuditActionAssignmentUpdated     AuditAction = "ASSIGNMENT_UPDATED"
 	AuditActionAssignmentDeactivated AuditAction = "ASSIGNMENT_DEACTIVATED"
+
+	// Submission audit actions
+	AuditActionSubmissionCreated AuditAction = "SUBMISSION_CREATED"
+
+	// Group audit actions
+	AuditActionGroupCreated AuditAction = "GROUP_CREATED"
 )
 
 // AuditLogRequest is the payload sent to the IAM Service audit-log endpoint.
