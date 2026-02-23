@@ -8,6 +8,8 @@ import {
     AlertTriangle,
     ArrowLeft,
     Pencil,
+    LayoutGrid,
+    Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
     coursesApi,
     semestersApi,
     batchesApi,
@@ -51,7 +59,7 @@ import type {
 
 const STATUS_COLOR: Record<string, string> = {
     Planned: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-    Active: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    Active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
     Completed: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
     Cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
 };
@@ -64,8 +72,8 @@ export default function CourseInstancesPage() {
     const [batches, setBatches] = React.useState<Batch[]>([]);
     const [loading, setLoading] = React.useState(true);
 
-    const [instances, setInstances] = React.useState<CourseInstance[]>([]);
-    const [selectedBatch, setSelectedBatch] = React.useState('');
+    const [instancesByBatch, setInstancesByBatch] = React.useState<Record<string, CourseInstance[]>>({});
+    const [fetchingBatches, setFetchingBatches] = React.useState<Record<string, boolean>>({});
 
     // Create dialog
     const [createOpen, setCreateOpen] = React.useState(false);
@@ -96,6 +104,17 @@ export default function CourseInstancesPage() {
                 setCourses(c);
                 setSemesters(s);
                 setBatches(b);
+
+                // Pre-fetch instances for all batches
+                const instancesMap: Record<string, CourseInstance[]> = {};
+                await Promise.allSettled(
+                    b.map(async (batch) => {
+                        const list = await batchesApi.getCourseInstances(batch.id);
+                        instancesMap[batch.id] = list;
+                    })
+                );
+                setInstancesByBatch(instancesMap);
+
             } catch (err) {
                 toast.error('Failed to load reference data', handleApiError(err));
             } finally {
@@ -105,18 +124,17 @@ export default function CourseInstancesPage() {
         load();
     }, []);
 
-    React.useEffect(() => {
-        if (!selectedBatch) { setInstances([]); return; }
-        batchesApi.getCourseInstances(selectedBatch)
-            .then(setInstances)
-            .catch((err) => toast.error('Failed to load instances', handleApiError(err)));
-    }, [selectedBatch]);
-
-    async function refreshInstances() {
-        if (!selectedBatch) return;
-        const list = await batchesApi.getCourseInstances(selectedBatch);
-        setInstances(list);
-    }
+    const fetchInstancesForBatch = async (batchId: string) => {
+        setFetchingBatches(p => ({ ...p, [batchId]: true }));
+        try {
+            const list = await batchesApi.getCourseInstances(batchId);
+            setInstancesByBatch(p => ({ ...p, [batchId]: list }));
+        } catch (err) {
+            toast.error('Failed to refresh instances', handleApiError(err));
+        } finally {
+            setFetchingBatches(p => ({ ...p, [batchId]: false }));
+        }
+    };
 
     async function handleCreate(e: React.FormEvent) {
         e.preventDefault();
@@ -132,7 +150,7 @@ export default function CourseInstancesPage() {
             await courseInstancesApi.create(createValues);
             toast.success('Course instance created');
             setCreateOpen(false);
-            if (selectedBatch === createValues.batch_id) await refreshInstances();
+            await fetchInstancesForBatch(createValues.batch_id);
         } catch (err) {
             toast.error('Failed to create', handleApiError(err));
         } finally {
@@ -157,7 +175,7 @@ export default function CourseInstancesPage() {
             });
             toast.success('Instance updated');
             setEditOpen(false);
-            await refreshInstances();
+            await fetchInstancesForBatch(editTarget.batch_id);
         } catch (err) {
             toast.error('Failed to update', handleApiError(err));
         } finally {
@@ -179,165 +197,248 @@ export default function CourseInstancesPage() {
     const semesterName = (id: string) => semesters.find((s) => s.id === id)?.name ?? id.slice(0, 8);
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <Link href="/admin/academics/enrollment">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                </Link>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Course Instances</h1>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        Manage course offerings per semester and group.
-                    </p>
+        <div className="space-y-8 pb-10">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-6">
+                <div className="flex items-start gap-4">
+                    <Link href="/admin/academics/enrollment">
+                        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-full bg-background mt-1 hover:bg-muted/50 transition-colors">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-black tracking-tight lg:text-4xl text-foreground font-serif">
+                            Course Instances
+                        </h1>
+                        <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                            <LayoutGrid className="h-4 w-4" />
+                            Grouped by Batches
+                        </p>
+                    </div>
                 </div>
+                {canWrite && (
+                    <Button
+                        onClick={() => { setCreateValues((prev) => ({ ...prev, batch_id: '' })); setCreateErrors({}); setCreateOpen(true); }}
+                        className="gap-2 h-10 px-5 shadow-sm rounded-full shrink-0"
+                    >
+                        <Plus className="h-4 w-4" /> New Instance
+                    </Button>
+                )}
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+                <div className="flex flex-col items-center justify-center py-32 space-y-4">
+                    <div className="relative">
+                        <div className="absolute inset-0 rounded-full blur-xl bg-primary/20 animate-pulse" />
+                        <Loader2 className="h-10 w-10 animate-spin text-primary relative z-10" />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium tracking-wide uppercase">Organizing curriculum...</p>
+                </div>
+            ) : batches.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center rounded-2xl border border-dashed border-border/60 bg-muted/10">
+                    <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                        <Users className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-bold">No Batches Found</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-6">
+                        Course instances are grouped by batches, but there are no batches available yet. Create a batch first.
+                    </p>
                 </div>
             ) : (
-                <>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <div className="flex-1 max-w-xs">
-                            <Select value={selectedBatch} onValueChange={setSelectedBatch}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a group…" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {batches.map((b) => (
-                                        <SelectItem key={b.id} value={b.id}>
-                                            {b.name} ({b.code})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {canWrite && (
-                            <Button onClick={() => { setCreateValues({ ...createValues, batch_id: selectedBatch }); setCreateErrors({}); setCreateOpen(true); }} className="gap-2">
-                                <Plus className="h-4 w-4" /> New Instance
-                            </Button>
-                        )}
-                    </div>
+                <Accordion
+                    type="multiple"
+                    className="w-full space-y-4"
+                    defaultValue={batches.slice(0, 3).map(b => b.id)}
+                >
+                    {batches.map((batch) => {
+                        const batchInstances = instancesByBatch[batch.id] || [];
+                        const isFetching = fetchingBatches[batch.id];
 
-                    {!selectedBatch && (
-                        <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
-                            <BookOpen className="h-12 w-12 mb-3 opacity-40" />
-                            <p className="text-sm">Select a group to view its course instances.</p>
-                        </div>
-                    )}
+                        let startYear = new Date().getFullYear();
+                        let endYear = new Date().getFullYear() + 4;
+                        if (batch.start_year) {
+                            startYear = new Date(batch.start_year).getFullYear();
+                        }
+                        if (batch.end_year) {
+                            endYear = new Date(batch.end_year).getFullYear();
+                        }
 
-                    {selectedBatch && instances.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
-                            <BookOpen className="h-12 w-12 mb-3 opacity-40" />
-                            <p className="text-sm">No course instances for this group yet.</p>
-                        </div>
-                    )}
-
-                    {instances.length > 0 && (
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {instances.map((ci) => (
-                                <Card key={ci.id} className="transition-all hover:shadow-md group">
-                                    <CardContent className="p-5">
-                                        <div className="flex items-start justify-between">
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="font-semibold text-sm truncate">
-                                                    {courseName(ci.course_id)}
+                        return (
+                            <AccordionItem
+                                key={batch.id}
+                                value={batch.id}
+                                className="border border-border/50 bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 group/accordion"
+                            >
+                                <AccordionTrigger className="px-6 py-5 hover:no-underline hover:bg-muted/30 transition-colors">
+                                    <div className="flex items-center justify-between w-full pr-4 text-left">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover/accordion:bg-primary/20 transition-colors">
+                                                <Users className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold tracking-tight group-hover/accordion:text-primary transition-colors">
+                                                    {batch.name}
                                                 </h3>
-                                                <p className="text-xs text-zinc-400 font-mono">
-                                                    {courseCode(ci.course_id)}
+                                                <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                                                    {batch.code} • {startYear} - {endYear}
                                                 </p>
                                             </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Badge variant="secondary" className="bg-muted text-muted-foreground rounded-full px-3 py-0.5 font-medium border-0">
+                                                {batchInstances.length} {batchInstances.length === 1 ? 'Instance' : 'Instances'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+
+                                <AccordionContent className="px-6 pb-6 pt-2 bg-muted/10 border-t border-border/40">
+                                    {isFetching ? (
+                                        <div className="flex justify-center py-10">
+                                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                        </div>
+                                    ) : batchInstances.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border border-dashed border-border/50 bg-background/50">
+                                            <BookOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                                            <p className="text-sm font-medium text-muted-foreground">No course instances planned</p>
                                             {canWrite && (
                                                 <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={() => openEdit(ci)}
+                                                    variant="link"
+                                                    className="text-xs text-primary mt-1 h-auto p-0"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setCreateValues({ ...createValues, batch_id: batch.id });
+                                                        setCreateErrors({});
+                                                        setCreateOpen(true);
+                                                    }}
                                                 >
-                                                    <Pencil className="h-3.5 w-3.5" />
+                                                    Create one for this batch
                                                 </Button>
                                             )}
                                         </div>
-                                        <p className="text-xs text-zinc-500 mt-1 mb-2">
-                                            {semesterName(ci.semester_id)}
-                                        </p>
-                                        <div className="flex gap-2 items-center">
-                                            <Badge className={`text-xs border-0 ${STATUS_COLOR[ci.status] ?? ''}`}>
-                                                {ci.status}
-                                            </Badge>
-                                            <span className="text-xs text-zinc-400">
-                                                Max: {ci.max_enrollment}
-                                            </span>
+                                    ) : (
+                                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 pt-4">
+                                            {batchInstances.map((ci, idx) => (
+                                                <Card
+                                                    key={ci.id}
+                                                    className="group/card relative overflow-hidden border-border/60 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 bg-background translate-y-0 hover:-translate-y-1"
+                                                    style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}
+                                                >
+                                                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/40 to-primary/10 opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                                                    <CardContent className="p-5">
+                                                        <div className="flex items-start justify-between gap-2 mb-3">
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="font-bold text-base leading-tight truncate mb-1 text-foreground" title={courseName(ci.course_id)}>
+                                                                    {courseName(ci.course_id)}
+                                                                </h4>
+                                                                <p className="text-xs text-muted-foreground font-mono inline-flex items-center bg-muted px-1.5 py-0.5 rounded-sm">
+                                                                    {courseCode(ci.course_id)}
+                                                                </p>
+                                                            </div>
+                                                            {canWrite && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 rounded-full opacity-0 group-hover/card:opacity-100 transition-opacity focus:opacity-100 shrink-0 bg-muted/50 hover:bg-muted"
+                                                                    onClick={(e) => { e.preventDefault(); openEdit(ci); }}
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-4">
+                                                            <div className="flex items-center justify-between text-sm">
+                                                                <span className="text-muted-foreground">Semester:</span>
+                                                                <span className="font-medium truncate max-w-[120px]" title={semesterName(ci.semester_id)}>
+                                                                    {semesterName(ci.semester_id)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-sm">
+                                                                <span className="text-muted-foreground">Capacity:</span>
+                                                                <span className="font-medium">{ci.max_enrollment} students</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-5 pt-4 border-t border-border/50 flex gap-2 items-center justify-end">
+                                                            <Badge className={`text-[10px] uppercase font-bold tracking-wider rounded-md border-0 px-2 py-0.5 ${STATUS_COLOR[ci.status] ?? ''}`}>
+                                                                {ci.status}
+                                                            </Badge>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </>
+                                    )}
+                                </AccordionContent>
+                            </AccordionItem>
+                        );
+                    })}
+                </Accordion>
             )}
 
             {/* Create dialog */}
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                <DialogContent className="sm:max-w-[480px]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <BookOpen className="h-5 w-5 text-zinc-600" />
-                            Create Course Instance
-                        </DialogTitle>
-                        <DialogDescription>
-                            Assign a course to a semester and group.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleCreate} className="space-y-4 py-2">
-                        <div className="space-y-1.5">
-                            <Label>Course</Label>
+                <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden rounded-2xl border-border/50 shadow-2xl">
+                    <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-xl font-serif">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <BookOpen className="h-4 w-4 text-primary" />
+                                </div>
+                                Create Course Instance
+                            </DialogTitle>
+                            <DialogDescription className="text-sm mt-1">
+                                Add a new course offering for a specific batch and semester.
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+                    <form onSubmit={handleCreate} className="space-y-5 p-6">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Course</Label>
                             <Select value={createValues.course_id} onValueChange={(v) => setCreateValues((p) => ({ ...p, course_id: v }))}>
-                                <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
+                                <SelectTrigger className="h-10 border-border/60 focus:ring-primary/20 bg-background"><SelectValue placeholder="Select course" /></SelectTrigger>
                                 <SelectContent>
                                     {courses.map((c) => (
-                                        <SelectItem key={c.id} value={c.id}>{c.title} ({c.code})</SelectItem>
+                                        <SelectItem key={c.id} value={c.id}>{c.title} <span className="text-muted-foreground text-xs ml-1 font-mono">({c.code})</span></SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {createErrors.course_id && <p className="text-xs text-red-600">{createErrors.course_id}</p>}
+                            {createErrors.course_id && <p className="text-xs text-destructive font-medium">{createErrors.course_id}</p>}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label>Semester</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Semester</Label>
                                 <Select value={createValues.semester_id} onValueChange={(v) => setCreateValues((p) => ({ ...p, semester_id: v }))}>
-                                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                                    <SelectTrigger className="h-10 border-border/60 focus:ring-primary/20 bg-background"><SelectValue placeholder="Select" /></SelectTrigger>
                                     <SelectContent>
                                         {semesters.map((s) => (
                                             <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {createErrors.semester_id && <p className="text-xs text-red-600">{createErrors.semester_id}</p>}
+                                {createErrors.semester_id && <p className="text-xs text-destructive font-medium">{createErrors.semester_id}</p>}
                             </div>
-                            <div className="space-y-1.5">
-                                <Label>Group</Label>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Batch</Label>
                                 <Select value={createValues.batch_id} onValueChange={(v) => setCreateValues((p) => ({ ...p, batch_id: v }))}>
-                                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                                    <SelectTrigger className="h-10 border-border/60 focus:ring-primary/20 bg-background"><SelectValue placeholder="Select" /></SelectTrigger>
                                     <SelectContent>
                                         {batches.map((b) => (
                                             <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {createErrors.batch_id && <p className="text-xs text-red-600">{createErrors.batch_id}</p>}
+                                {createErrors.batch_id && <p className="text-xs text-destructive font-medium">{createErrors.batch_id}</p>}
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label>Status</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
                                 <Select value={createValues.status} onValueChange={(v) => setCreateValues((p) => ({ ...p, status: v as CourseInstanceStatus }))}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-10 border-border/60 focus:ring-primary/20 bg-background"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         {COURSE_INSTANCE_STATUSES.map((s) => (
                                             <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -345,22 +446,23 @@ export default function CourseInstancesPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-1.5">
-                                <Label>Max Enrollment</Label>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Max Enrollment</Label>
                                 <Input
                                     type="number"
                                     min={1}
+                                    className="h-10 border-border/60 focus-visible:ring-primary/20 bg-background"
                                     value={createValues.max_enrollment}
                                     onChange={(e) => setCreateValues((p) => ({ ...p, max_enrollment: parseInt(e.target.value, 10) || 0 }))}
                                 />
-                                {createErrors.max_enrollment && <p className="text-xs text-red-600">{createErrors.max_enrollment}</p>}
+                                {createErrors.max_enrollment && <p className="text-xs text-destructive font-medium">{createErrors.max_enrollment}</p>}
                             </div>
                         </div>
 
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-                            <Button type="submit" disabled={createSub}>
-                                {createSub ? 'Creating…' : 'Create Instance'}
+                        <DialogFooter className="pt-4 border-t border-border/40 space-x-2">
+                            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="rounded-full">Cancel</Button>
+                            <Button type="submit" disabled={createSub} className="rounded-full px-6 shadow-sm">
+                                {createSub ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : 'Create Instance'}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -369,18 +471,25 @@ export default function CourseInstancesPage() {
 
             {/* Edit dialog */}
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent className="sm:max-w-[400px]">
-                    <DialogHeader>
-                        <DialogTitle>Update Instance</DialogTitle>
-                        <DialogDescription>
-                            {editTarget && `${courseName(editTarget.course_id)} — ${semesterName(editTarget.semester_id)}`}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleEdit} className="space-y-4 py-2">
-                        <div className="space-y-1.5">
-                            <Label>Status</Label>
+                <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden rounded-2xl border-border/50 shadow-2xl">
+                    <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-xl font-serif">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <Pencil className="h-4 w-4 text-primary" />
+                                </div>
+                                Update Instance
+                            </DialogTitle>
+                            <DialogDescription className="text-sm mt-1 truncate" title={editTarget ? `${courseName(editTarget.course_id)} — ${semesterName(editTarget.semester_id)}` : ''}>
+                                {editTarget && `${courseName(editTarget.course_id)} — ${semesterName(editTarget.semester_id)}`}
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+                    <form onSubmit={handleEdit} className="space-y-5 p-6">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
                             <Select value={editValues.status} onValueChange={(v) => setEditValues((p) => ({ ...p, status: v }))}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="h-10 border-border/60 focus:ring-primary/20 bg-background"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     {COURSE_INSTANCE_STATUSES.map((s) => (
                                         <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -388,19 +497,20 @@ export default function CourseInstancesPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-1.5">
-                            <Label>Max Enrollment</Label>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Max Enrollment</Label>
                             <Input
                                 type="number"
                                 min={1}
+                                className="h-10 border-border/60 focus-visible:ring-primary/20 bg-background"
                                 value={editValues.max_enrollment}
                                 onChange={(e) => setEditValues((p) => ({ ...p, max_enrollment: parseInt(e.target.value, 10) || 0 }))}
                             />
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-                            <Button type="submit" disabled={editSub}>
-                                {editSub ? 'Saving…' : 'Save Changes'}
+                        <DialogFooter className="pt-4 border-t border-border/40 space-x-2">
+                            <Button type="button" variant="ghost" onClick={() => setEditOpen(false)} className="rounded-full">Cancel</Button>
+                            <Button type="submit" disabled={editSub} className="rounded-full px-6 shadow-sm">
+                                {editSub ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Changes'}
                             </Button>
                         </DialogFooter>
                     </form>
