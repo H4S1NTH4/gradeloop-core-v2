@@ -34,6 +34,8 @@ make check-breaking
 make generate
 ```
 
+test
+
 ## Consumption
 
 ### Go
